@@ -1,100 +1,94 @@
 import { login as loginApi } from "@/api/authentication'/auth";
 import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
+import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import { ActivityIndicator, Image, Text, TextInput, TouchableOpacity, View } from "react-native";
 
-const COLORS = {
-  purple: "#6420AA",
-  pink: "#FF3EA5",
-  grey: "#808080",
-  black: "#0D0D0D",
-  lightPink: "#FFB5DA",
-};
-
 export default function LoginScreen() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
 
-  const handleLogin = async (e: any) => {
+  const loginMutation = useMutation({
+    mutationFn: ({ email, password }: { email: string; password: string }) =>
+      loginApi(email, password),
+    onSuccess: () => {
+      router.replace("/(tabs)");
+    },
+    onError: (err: any) => {
+      setError(err.response?.data?.message || "Đăng nhập thất bại. Vui lòng thử lại.");
+    },
+  });
+
+  const handleLogin = (e: any) => {
     e?.preventDefault?.();
     setError("");
-    setIsLoading(true);
-
-    try {
-      await loginApi(username, password);
-      router.replace("/(tabs)");
-    } catch (err: any) {
-      setError(err.response?.data?.message || "Đăng nhập thất bại. Vui lòng thử lại.");
-    } finally {
-      setIsLoading(false);
-    }
+    loginMutation.mutate({ email: username, password });
   };
 
   return (
-    <View style={{ flex: 1, flexDirection: 'column', backgroundColor: '#fff' }}>
+    <View className="flex-1 flex-col bg-white">
       <Header />
       
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center'}}>
-        <View style={{ width: '100%', maxWidth: 320, backgroundColor: 'white', borderRadius: 16}}>
+      <View className="flex-1 items-center justify-center">
+        <View className="w-full max-w-80 bg-white rounded-2xl">
 
 
-          <View style={{ alignItems: 'center', marginBottom: 32 }}>
+          <View className="items-center mb-8">
             <Image
               source={require("@/public/assets/image/loginImg.png")}
-              style={{ width: '50%', height: 131 }}
+              className="w-1/2 h-[131px]"
               resizeMode="cover"
             />
           </View>
 
-          <Text style={{ textAlign: 'center', fontWeight: '600', color: COLORS.purple, marginBottom: 16, fontSize: 20 }}>
+          <Text className="text-center font-semibold text-purple text-lg mb-4">
             ĐĂNG NHẬP
           </Text>
 
           {error ? (
-            <View style={{ marginBottom: 12, padding: 8, backgroundColor: '#fef2f2', borderWidth: 1, borderColor: '#fecaca', borderRadius: 8 }}>
-              <Text style={{ color: '#dc2626', fontSize: 14, textAlign: 'center' }}>{error}</Text>
+            <View className="mb-3 p-2 bg-red-50 border border-red-200 rounded-lg">
+              <Text className="text-red-600 text-sm text-center">{error}</Text>
             </View>
           ) : null}
 
-          <View style={{ gap: 12 }}>
+          <View className="gap-3">
             <View>
-              <Text style={{ fontSize: 14, color: COLORS.black }}>Tên đăng nhập</Text>
+              <Text className="text-sm text-tgray9">Tên đăng nhập</Text>
               <TextInput
                 placeholder="Điền tên đăng nhập"
-                placeholderTextColor={COLORS.grey}
+                placeholderTextColor="#808080"
                 value={username}
                 onChangeText={setUsername}
-                style={{ marginTop: 4, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: COLORS.grey, borderRadius: 8, color: COLORS.black }}
+                className="mt-1 px-3 py-2 border border-gray-500 rounded-lg text-tgray9"
               />
             </View>
 
             <View>
-              <Text style={{ fontSize: 14, color: COLORS.black }}>Mật khẩu</Text>
+              <Text className="text-sm text-tgray9">Mật khẩu</Text>
               <TextInput
                 placeholder="Điền mật khẩu"
-                placeholderTextColor={COLORS.grey}
+                placeholderTextColor="#808080"
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry
-                style={{ marginTop: 4, paddingHorizontal: 12, paddingVertical: 8, borderWidth: 1, borderColor: COLORS.grey, borderRadius: 8, color: COLORS.black }}
+                className="mt-1 px-3 py-2 border border-gray-500 rounded-lg text-tgray9"
               />
             </View>
 
-            <View style={{ alignItems: 'center' }}>
+            <View className="items-center">
               <TouchableOpacity
                 onPress={handleLogin}
-                disabled={isLoading}
-                style={{ paddingHorizontal: 20, paddingVertical: 8, backgroundColor: isLoading ? COLORS.lightPink : COLORS.pink, borderRadius: 8, alignItems: 'center' }}
+                disabled={loginMutation.isPending}
+                className="px-5 py-2 rounded-lg items-center bg-pink"
               >
-                {isLoading ? (
+                {loginMutation.isPending ? (
                   <ActivityIndicator color="white" />
                 ) : (
-                  <Text style={{ color: 'white', fontWeight: '600' }}>Đăng nhập</Text>
+                  <Text className="text-white font-semibold">Đăng nhập</Text>
                 )}
               </TouchableOpacity>
             </View>
