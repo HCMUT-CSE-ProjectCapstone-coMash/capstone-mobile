@@ -64,12 +64,6 @@ export default function LoginScreen() {
             ĐĂNG NHẬP
           </Text>
 
-          {error ? (
-            <View className="mb-3 p-2">
-              <Text className="text-red font-semibold text-sm text-center">{error}</Text>
-            </View>
-          ) : null}
-
           <View className="gap-3">
             <View>
               <Text className="text-sm text-tgray9">Tên đăng nhập</Text>
@@ -93,6 +87,12 @@ export default function LoginScreen() {
                 className="mt-1 px-3 py-2 border border-gray-500 rounded-lg text-tgray9"
               />
             </View>
+            
+            {error ? (
+              <View className="mb-3 p-2">
+                <Text className="text-red font-semibold text-sm text-center">{error}</Text>
+              </View>
+            ) : null}
 
             <View className="items-center">
               <TouchableOpacity
