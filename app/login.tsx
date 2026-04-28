@@ -67,7 +67,7 @@ export default function LoginScreen() {
                         ĐĂNG NHẬP
                     </Text>
 
-                    <View className="gap-3">
+                    <View className="gap-5">
                         <View>
                             <Text className="text-sm text-tgray9 mb-2">Tên đăng nhập</Text>
                             <TextInput
@@ -92,7 +92,7 @@ export default function LoginScreen() {
                         </View>
                         
                         {error ? (
-                        <View className="mb-3 p-2">
+                        <View className="mb-2 p-2">
                             <Text className="text-red font-semibold text-sm text-center">{error}</Text>
                         </View>
                         ) : null}
