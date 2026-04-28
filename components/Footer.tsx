@@ -4,7 +4,7 @@ import { Text, View } from "react-native";
 export function Footer() {
 
   return (
-    <View className="bg-pink flex-row items-center px-6 py-3">
+    <View className="bg-pink flex-row items-center px-6 py-2">
       <Ionicons name="call-outline" size={18} color="white" />
 
       <Text className="text-white text-sm ml-2">

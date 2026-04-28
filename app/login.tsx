@@ -46,7 +46,7 @@ export default function LoginScreen() {
 
   return (
     <View className="flex-1 bg-white">
-        <SafeAreaView edges={["top"]} className="bg-purple" />
+        <SafeAreaView edges={["top"]} className="bg-gwhite" />
 
         <SafeAreaView edges={["left", "right"]} className="flex-1 bg-white">
             <Header />
