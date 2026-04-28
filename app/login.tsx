@@ -5,6 +5,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import { ActivityIndicator, Image, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function LoginScreen() {
   const [username, setUsername] = useState("");
@@ -26,11 +27,25 @@ export default function LoginScreen() {
   const handleLogin = (e: any) => {
     e?.preventDefault?.();
     setError("");
+    if (!username && !password) {
+      setError("Vui lòng nhập tên đăng nhập và mật khẩu.");
+      return;
+    }
+
+    if (!username) {
+      setError("Vui lòng nhập tên đăng nhập.");
+      return;
+    }
+
+    if (!password) {
+      setError("Vui lòng nhập mật khẩu.");
+      return;
+    }
     loginMutation.mutate({ email: username, password });
   };
 
   return (
-    <View className="flex-1 flex-col bg-white">
+    <SafeAreaView className="flex-1 flex-col bg-white">
       <Header />
       
       <View className="flex-1 items-center justify-center">
@@ -45,13 +60,13 @@ export default function LoginScreen() {
             />
           </View>
 
-          <Text className="text-center font-semibold text-purple text-lg mb-4">
+          <Text className="text-center font-semibold text-purple text-xl mb-4">
             ĐĂNG NHẬP
           </Text>
 
           {error ? (
-            <View className="mb-3 p-2 bg-red-50 border border-red-200 rounded-lg">
-              <Text className="text-red-600 text-sm text-center">{error}</Text>
+            <View className="mb-3 p-2">
+              <Text className="text-red font-semibold text-sm text-center">{error}</Text>
             </View>
           ) : null}
 
@@ -97,6 +112,6 @@ export default function LoginScreen() {
       </View>
 
       <Footer />
-    </View>
+    </SafeAreaView>
   );
 }
