@@ -8,11 +8,11 @@ module.exports = {
       extend: {
         colors: {
             gwhite: "#F9F9FB",
-            tgray05: "#FAFAFA",
+            tgray2: "#D6D6D6",
+            tgray50: "#FAFAFA",
             tgray5: "#808080",
             tgray6: "#616161",
             tgray9: "#0D0D0D",
-            grayDark: "#3A4163",
             purple: "#6420AA",
             lightPurple: "#DEBDFF",
             pink: "#FF3EA5",
