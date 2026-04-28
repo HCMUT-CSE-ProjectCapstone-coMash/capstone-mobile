@@ -20,7 +20,7 @@ export default function LoginScreen() {
       router.replace("/(tabs)");
     },
     onError: (err: any) => {
-      setError(err.response?.data?.message || "Đăng nhập thất bại. Vui lòng thử lại.");
+      setError(err.response?.data?.message || "Đăng nhập thất bại.");
     },
   });
 
@@ -49,7 +49,7 @@ export default function LoginScreen() {
       <Header />
       
       <View className="flex-1 items-center justify-center">
-        <View className="w-full max-w-80 bg-white rounded-2xl">
+        <View className="w-full max-w-80 bg-white">
 
 
           <View className="items-center mb-8">
