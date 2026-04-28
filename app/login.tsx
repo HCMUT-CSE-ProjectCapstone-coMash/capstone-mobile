@@ -75,7 +75,7 @@ export default function LoginScreen() {
                                 placeholderTextColor="#808080"
                                 value={username}
                                 onChangeText={setUsername}
-                                className="h-12 mt-1 px-3 py-2 border border-tgray5 rounded-lg text-tgray5"
+                                className="h-12 mt-1 px-3 py-2 border border-tgray5 rounded-lg text-tgray5 text-xs"
                             />
                         </View>
 
@@ -87,7 +87,7 @@ export default function LoginScreen() {
                                 value={password}
                                 onChangeText={setPassword}
                                 secureTextEntry
-                                className=" h-12 mt-1 px-3 py-2 border border-tgray5 rounded-lg text-tgray5"
+                                className=" h-12 mt-1 px-3 py-2 border border-tgray5 rounded-lg text-tgray5 text-xs"
                             />
                         </View>
                         
