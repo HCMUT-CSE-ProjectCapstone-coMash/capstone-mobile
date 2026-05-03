@@ -7,7 +7,13 @@ export default function TabsLayout() {
             <Tabs.Screen
                 name="index"
                 options={{
-                    title: "Home",
+                    title: "Trang chủ",
+                }}
+            />
+            <Tabs.Screen
+                name="profile"
+                options={{
+                    title: "Hồ sơ",
                 }}
             />
         </Tabs>
