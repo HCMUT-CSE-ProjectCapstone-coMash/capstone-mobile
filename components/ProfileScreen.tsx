@@ -43,12 +43,12 @@ export function ProfileScreen() {
                         ) : (
                             <View className="w-24 h-24 rounded-full bg-pink items-center justify-center">
                                 <Text className="text-white text-3xl font-bold">
-                                    {user.fullName!.charAt(0)}
+                                    {user?.fullName?.charAt(0) ?? "?"}
                                 </Text>
                             </View>
                         )}
                         <Text className="text-lg font-bold text-tgray9">{user.fullName}</Text>
-                        <Text className="text-sm text-tgray5">{roleLabel[user.role!]}</Text>
+                        <Text className="text-sm text-tgray5">{roleLabel[user?.role ?? ""]}</Text>
                     </View>
 
                     <View className="gap-4 px-2">
@@ -56,7 +56,7 @@ export function ProfileScreen() {
                         <InfoRow label="Email" value={user.email} />
                         <InfoRow label="Số điện thoại" value={user.phoneNumber} />
                         <InfoRow label="Giới tính" value={user.gender} />
-                        <InfoRow label="Ngày sinh" value={formatDate(user.dateOfBirth!)} />
+                        <InfoRow label="Ngày sinh" value={formatDate(user?.dateOfBirth ?? "")} />
                     </View>
                 </View>
 
