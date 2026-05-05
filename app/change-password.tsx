@@ -26,9 +26,9 @@ export default function ChangePasswordScreen() {
             dispatch(setUser({ ...user, hasChangedPassword: true }));
             
             if (user.role === "employee") {
-                router.replace("/(nhan-vien)");
+                router.replace("/(nhan-vien)/(tabs)");
             } else if (user.role === "owner") {
-                router.replace("/(chu-cuu-hang)");
+                router.replace("/(chu-cuu-hang)/(tabs)");
             }
         },
 

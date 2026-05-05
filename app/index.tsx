@@ -25,9 +25,9 @@ export default function Index() {
 
     if (!data.hasChangedPassword) return <Redirect href="/change-password" />;
 
-    if (data.role === "employee") return <Redirect href="/(nhan-vien)" />;
+    if (data.role === "employee") return <Redirect href="/(nhan-vien)/(tabs)" />;
 
-    if (data.role === "owner") return <Redirect href="/(chu-cuu-hang)" />;
+    if (data.role === "owner") return <Redirect href="/(chu-cuu-hang)/(tabs)" />;
 
     return <Redirect href="/login" />;
 }

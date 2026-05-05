@@ -5,30 +5,31 @@ import { setUser } from "@/stores/userStore";
 import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
-import { Image, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Image, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useDispatch } from "react-redux";
 
 export default function LoginScreen() {
 	const router = useRouter();
-
 	const dispatch = useDispatch();
 
 	const [username, setUsername] = useState("");
 	const [password, setPassword] = useState("");
 	const [error, setError] = useState("");
+	const [isInputFocused, setIsInputFocused] = useState(false);
 
 	const loginMutation = useMutation({
-		mutationFn: ({ email, password }: { email: string; password: string }) => Login(email, password),
+		mutationFn: ({ email, password }: { email: string; password: string }) =>
+			Login(email, password),
 
 		onSuccess: (data) => {
 			dispatch(setUser(data));
-			
+
 			if (data.hasChangedPassword) {
 				if (data.role === "employee") {
-					router.replace("/(nhan-vien)");
+					router.replace("/(nhan-vien)/(tabs)");
 				} else if (data.role === "owner") {
-					router.replace("/(chu-cuu-hang)");
+					router.replace("/(chu-cuu-hang)/(tabs)");
 				}
 			} else {
 				router.replace("/change-password");
@@ -61,78 +62,93 @@ export default function LoginScreen() {
 		loginMutation.mutate({ email: username, password });
 	};
 
-  	return (
-		<View className="flex-1 bg-white">
-			<SafeAreaView edges={["top"]} className="bg-gwhite" />
+	return (
+		<KeyboardAvoidingView
+			className="flex-1 bg-white"
+			behavior={Platform.OS === "ios" ? "padding" : "height"}
+		>
+			<ScrollView
+				className="flex-1"
+				contentContainerStyle={{ flexGrow: 1 }}
+				keyboardShouldPersistTaps="handled"
+				showsVerticalScrollIndicator={false}
+				scrollEnabled={isInputFocused}
+			>
+				<SafeAreaView edges={["top"]} className="bg-gwhite" />
 
-			<SafeAreaView edges={["left", "right"]} className="flex-1 bg-white">
 				<Header />
 
-				<View className="flex-1 items-center ">
-					<View className="w-full bg-white gap-5 p-5">
-						<View className="items-center mb-8 py-5">
+				<View className="flex-1 p-5 gap-5">
+					<View className="items-center py-5">
 						<Image
 							source={require("@/public/assets/image/loginImg.png")}
 							className="w-1/2 h-[131px]"
 							resizeMode="cover"
 						/>
+					</View>
+
+					<Text className="text-center font-semibold text-purple text-lg">
+						ĐĂNG NHẬP
+					</Text>
+
+					<View className="gap-5">
+						<View className="px-5">
+							<Text className="text-sm text-tgray9 mb-2">
+								Tên đăng nhập
+							</Text>
+							<TextInput
+								placeholder="Điền tên đăng nhập"
+								placeholderTextColor="#808080"
+								value={username}
+								onChangeText={setUsername}
+								onFocus={() => setIsInputFocused(true)}
+								onBlur={() => setIsInputFocused(false)}
+								className="h-12 mt-1 px-3 py-2 border border-tgray5 rounded-lg text-tgray5 text-xs"
+							/>
 						</View>
 
-						<Text className="text-center font-semibold text-purple text-lg">
-							ĐĂNG NHẬP
-						</Text>
+						<View className="px-5">
+							<Text className="text-sm text-tgray9 mb-2">Mật khẩu</Text>
+							<TextInput
+								placeholder="Điền mật khẩu"
+								placeholderTextColor="#808080"
+								value={password}
+								onChangeText={setPassword}
+								secureTextEntry
+								onFocus={() => setIsInputFocused(true)}
+								onBlur={() => setIsInputFocused(false)}
+								className="h-12 mt-1 px-3 py-2 border border-tgray5 rounded-lg text-tgray5 text-xs"
+							/>
+						</View>
 
-						<View className="gap-5">
-							<View className="px-5">
-								<Text className="text-sm text-tgray9 mb-2">Tên đăng nhập</Text>
-								<TextInput
-									placeholder="Điền tên đăng nhập"
-									placeholderTextColor="#808080"
-									value={username}
-									onChangeText={setUsername}
-									className="h-12 mt-1 px-3 py-2 border border-tgray5 rounded-lg text-tgray5 text-xs"
-								/>
+						{error && (
+							<View className="mb-2 p-2">
+								<Text className="text-red font-semibold text-sm text-center">
+									{error}
+								</Text>
 							</View>
+						)}
 
-							<View className="px-5">
-								<Text className="text-sm text-tgray9 mb-2">Mật khẩu</Text>
-								<TextInput
-									placeholder="Điền mật khẩu"
-									placeholderTextColor="#808080"
-									value={password}
-									onChangeText={setPassword}
-									secureTextEntry
-									className=" h-12 mt-1 px-3 py-2 border border-tgray5 rounded-lg text-tgray5 text-xs"
-								/>
-							</View>
-
-							{error && (
-								<View className="mb-2 p-2">
-									<Text className="text-red font-semibold text-sm text-center">
-										{error}
-									</Text>
-								</View>
-							)}
-
-							<View className="items-center">
-								<TouchableOpacity
-									onPress={handleLogin}
-									disabled={loginMutation.isPending}
-									className="p-3 rounded-xl items-center bg-pink "
-								>
-									<Text className="text-white text-sm font-semibold">
-										{loginMutation.isPending ? "Đang đăng nhập..." : "Đăng nhập"}
-									</Text>
-								</TouchableOpacity>
-							</View>
+						<View className="items-center pb-5">
+							<TouchableOpacity
+								onPress={handleLogin}
+								disabled={loginMutation.isPending}
+								className="p-3 rounded-xl items-center bg-pink"
+							>
+								<Text className="text-white text-sm font-semibold">
+									{loginMutation.isPending
+										? "Đang đăng nhập..."
+										: "Đăng nhập"}
+								</Text>
+							</TouchableOpacity>
 						</View>
 					</View>
 				</View>
 
 				<Footer />
-			</SafeAreaView>
 
-			<SafeAreaView edges={["bottom"]} className="bg-pink" />
-		</View>
+				<SafeAreaView edges={["bottom"]} className="bg-pink" />
+			</ScrollView>
+		</KeyboardAvoidingView>
 	);
 }

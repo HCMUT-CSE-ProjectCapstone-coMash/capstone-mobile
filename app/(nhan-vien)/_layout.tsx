@@ -1,37 +1,21 @@
-import { Ionicons } from "@expo/vector-icons";
-import { Tabs } from "expo-router";
+import { Stack } from "expo-router";
 
-const PRIMARY = "#6420AA";
-const INACTIVE = "#9B8AB8";
-
-export default function TabsLayout() {
-    
+export default function Layout() {
     return (
-        <Tabs 
-            screenOptions={{ 
-                headerShown: false,
-                tabBarActiveTintColor: PRIMARY,
-                tabBarInactiveTintColor: INACTIVE,
-            }}
-        >
-            <Tabs.Screen
-                name="index"
-                options={{
-                    title: "Trang chủ",
-                    tabBarIcon: ({ color, focused }) => (
-                        <Ionicons name={focused ? "home" : "home-outline"} size={24} color={color}/>
-                    ),
+        <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen
+                name="(tabs)"
+                options={{ 
+                    title: "Trang chủ"
                 }}
             />
-            <Tabs.Screen
-                name="profile"
+            <Stack.Screen
+                name="import-product"
                 options={{
-                    title: "Hồ sơ",
-                    tabBarIcon: ({ color, focused }) => (
-                        <Ionicons name={focused ? "person" : "person-outline"} size={24} color={color}/>
-                    ),
+                    title: "Nhập hàng",
+                    headerBackTitle: "Quay lại",
                 }}
             />
-        </Tabs>
-    );
+        </Stack>
+    )
 }

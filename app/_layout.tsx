@@ -1,3 +1,4 @@
+import { GlobalAlert } from "@/components/Alert";
 import { stores } from "@/stores/store";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
@@ -19,6 +20,7 @@ export default function RootLayout() {
 						<Stack.Screen name="(nhan-vien)" />
 						<Stack.Screen name="(chu-cuu-hang)" />
 					</Stack>
+					<GlobalAlert/>
 				</SafeAreaProvider>
 			</QueryClientProvider>
 		</Provider>
