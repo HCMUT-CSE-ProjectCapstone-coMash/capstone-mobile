@@ -2,12 +2,13 @@ import { GlobalAlert } from "@/components/Alert";
 import { stores } from "@/stores/store";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
+import { useState } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { Provider } from "react-redux";
 import "../global.css";
 
 export default function RootLayout() {
-	const queryClient = new QueryClient();
+	const [queryClient] = useState(() => new QueryClient());
 
     return (
 		<Provider store={stores}>

@@ -14,7 +14,6 @@ export default function Layout() {
                 name="import-product"
                 options={{
                     title: "Nhập hàng",
-                    headerBackTitle: "Quay lại",
                 }}
             />
         </Stack>

@@ -8,6 +8,7 @@ import { addAlert } from "@/stores/alertStore";
 import { RootState } from "@/stores/store";
 import { CreateProduct, Product } from "@/types/Product";
 import { formatThousands, parseFormattedNumber } from "@/utilities/numberFormat";
+import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import * as ImageManipulator from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
@@ -190,20 +191,30 @@ export function ImportProductForm() {
                             resizeMode="cover"
                         />
                         <TouchableOpacity
-                            className="absolute top-2 right-2 bg-white rounded-full w-8 h-8 items-center justify-center shadow"
+                            className="absolute top-2 right-2 bg-white rounded-full w-8 h-8 items-center justify-center"
                             onPress={() => { setField("imageUri", null); setField("imageFile", null); }}
                         >
-                            <Text className="text-pink text-sm">✕</Text>
+                            <Ionicons name="close" size={16} color="#ec4899" />
                         </TouchableOpacity>
                     </View>
                 ) : (
-                    <TouchableOpacity
-                        className="w-full aspect-square bg-gray-50 rounded-xl border-2 border-dashed border-gray-200 items-center justify-center gap-3"
-                        onPress={pickImage}
-                    >
-                        <Text className="text-4xl text-gray-300">📷</Text>
-                        <Text className="text-sm text-gray-400">Chọn ảnh từ thư viện</Text>
-                    </TouchableOpacity>
+                    <View className="flex-row gap-3">
+                        <TouchableOpacity
+                            className="flex-1 aspect-square bg-gray-50 rounded-xl border-2 border-dashed border-gray-200 items-center justify-center gap-3"
+                            onPress={pickImage}
+                        >
+                            <Ionicons name="images-outline" size={36} color="#d1d5db" />
+                            <Text className="text-sm text-gray-400">Thư viện</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            className="flex-1 aspect-square bg-gray-50 rounded-xl border-2 border-dashed border-gray-200 items-center justify-center gap-3"
+                            onPress={() => Alert.alert("Chức năng chưa được hỗ trợ", "Tính năng chụp ảnh sẽ được cập nhật trong tương lai.")}
+                        >
+                            <Ionicons name="camera-outline" size={36} color="#d1d5db" />
+                            <Text className="text-sm text-gray-400">Chụp ảnh</Text>
+                        </TouchableOpacity>
+                    </View>
                 )}
             </View>
 
