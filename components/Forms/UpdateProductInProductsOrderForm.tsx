@@ -342,12 +342,14 @@ export function UpdateProductInProductsOrderForm({ editProduct }: UpdateProductF
             />
 
             <View className="flex-row justify-end gap-3 mt-2">
-                <TouchableOpacity
-                    className="py-2.5 px-5 rounded-xl bg-purple items-center"
-                    onPress={() => dispatch(clearEditingProduct())}
-                >
-                    <Text className="text-white text-sm font-medium">Huỷ bỏ</Text>
-                </TouchableOpacity>
+                {user.role === "employee" && (
+                    <TouchableOpacity
+                        className="py-2.5 px-5 rounded-xl bg-purple items-center"
+                        onPress={() => dispatch(clearEditingProduct())}
+                    >
+                        <Text className="text-white text-sm font-medium">Huỷ bỏ</Text>
+                    </TouchableOpacity>
+                )}
 
                 <TouchableOpacity
                     className={`py-2.5 px-5 rounded-xl items-center ${
