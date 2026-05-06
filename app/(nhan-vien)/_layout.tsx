@@ -13,7 +13,12 @@ export default function Layout() {
                 name="import-product"
                 options={{
                     title: "Nhập hàng",
-                    headerBackTitle: "Quay lại",
+                }}
+            />
+            <Stack.Screen
+                name="approval-list"
+                options={{
+                    title: "Danh sách duyệt",
                 }}
             />
         </Stack>

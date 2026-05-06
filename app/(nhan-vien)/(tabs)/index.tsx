@@ -6,6 +6,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 const employeeItems: MenuItem[] = [
     { label: "Chụp hàng", icon: "camera-outline", color: "#D4537E", bg: "#FBEAF0", route: "/(nhan-vien)/capture-product" },
     { label: "Nhập hàng", icon: "cube-outline", color: "#185FA5", bg: "#E6F1FB", route: "/(nhan-vien)/import-product" },
+    { label: "Danh sách duyệt", icon: "checkmark-circle-outline", color: "#2E7D32", bg: "#E8F5E9", route: "/(nhan-vien)/approval-list" },
 ];
 
 export default function HomeScreen() {

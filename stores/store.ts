@@ -1,11 +1,13 @@
 import { configureStore } from "@reduxjs/toolkit";
 import alertReducer from "./alertStore";
+import productsOrderReducer from "./productsOrderStore";
 import userReducer from "./userStore";
 
 export const stores = configureStore({
     reducer: {
         user: userReducer,
         alert: alertReducer,
+        productsOrder: productsOrderReducer
     }
 });
 
