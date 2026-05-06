@@ -1,4 +1,5 @@
-import { CreateProduct } from "@/types/Product";
+import { CreateProduct, RNFile } from "@/types/Product";
+import { EncodingType, readAsStringAsync } from "expo-file-system/legacy";
 import { axiosClient } from "../axiosClient";
 
 export async function FetchApprovedProductByName(productName: string) {
@@ -49,6 +50,32 @@ export async function OwnerCreateProduct(productData: CreateProduct) {
                 "Content-Type": "multipart/form-data"
             }
         }
+    );
+
+    return response.data;
+}
+
+export async function SearchSimilarProduct(imageFile: RNFile) {
+    const base64Image = await readAsStringAsync(imageFile.uri, {
+        encoding: EncodingType.Base64,
+    });
+
+    const response = await axiosClient.post(
+        "/product/fetch-similar",
+        { ImageBase64: base64Image },
+    );
+
+    return response.data;
+}
+
+export async function AnalyzeImage(imageFile: RNFile) {
+    const base64Image = await readAsStringAsync(imageFile.uri, {
+        encoding: EncodingType.Base64,
+    });
+
+    const response = await axiosClient.post(
+        "/product/analyze",
+        { ImageBase64: base64Image },
     );
 
     return response.data;

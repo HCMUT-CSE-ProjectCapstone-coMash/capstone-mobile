@@ -45,3 +45,22 @@ export interface CreateProduct {
     importPrice: number,
     salePrice: number,
 }
+
+export interface ProductWithOrderStatus {
+    id: string,
+    productId: string
+    productName: string,
+    category: string,
+    color: string,
+    pattern: string,
+    sizeType: "Letter" | "Number",
+    quantities: ProductQuantity[],
+    createdBy: string,
+    createdAt: string,
+    status: "Pending" | "Approved",
+    imageURL: string
+    quantityChanges?: ProductQuantityChange[],
+    importPrice: number,
+    salePrice: number,
+    isInPendingOrder: boolean
+};

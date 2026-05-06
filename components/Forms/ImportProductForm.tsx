@@ -1,4 +1,4 @@
-import { CreateProductIdByCategory, FetchApprovedProductByName, OwnerCreateProduct } from "@/api/products/products";
+import { CreateProductIdByCategory, FetchApprovedProductByName, OwnerCreateProduct, SearchSimilarProduct } from "@/api/products/products";
 import { FormField } from "@/components/FormInputs/FormField";
 import { StyledSelectInput } from "@/components/FormInputs/StyledSelectInput";
 import { StyledTextInput } from "@/components/FormInputs/StyledTextInput";
@@ -6,7 +6,7 @@ import { categories, colors, patterns, sizesLetter, sizesNumber } from "@/consta
 import { useDebounce } from "@/hooks/useDebounce";
 import { addAlert } from "@/stores/alertStore";
 import { RootState } from "@/stores/store";
-import { CreateProduct, Product } from "@/types/Product";
+import { CreateProduct, Product, ProductWithOrderStatus, RNFile } from "@/types/Product";
 import { formatThousands, parseFormattedNumber } from "@/utilities/numberFormat";
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -16,6 +16,7 @@ import React, { useState } from "react";
 import { ActivityIndicator, Alert, FlatList, Image, Modal, ScrollView, Switch, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
 import { CameraCapture } from "../CameraCapture";
+import { SuggestionModal } from "../Modals/SuggestionModal";
 
 interface FormState {
     productId: string;
@@ -96,8 +97,21 @@ export function ImportProductForm() {
 
             setField("imageUri", saved.uri);
             setField("imageFile", { uri: saved.uri, name: "product.jpg", type: "image/jpeg" });
+            imageSearchMutation.mutate({ uri: saved.uri, name: "product.jpg", type: "image/jpeg" });
         }
     };
+
+    // -─ Image search ──────────────────────────────────────────────
+    const [showSuggestionModal, setShowSuggestionModal] = useState(false);
+    const [similarProducts, setSimilarProducts] = useState<ProductWithOrderStatus[]>([]);
+
+    const imageSearchMutation = useMutation({
+        mutationFn: (imageFile: RNFile) => SearchSimilarProduct(imageFile),
+        onSuccess: (data) => {
+            setSimilarProducts(data);
+            setShowSuggestionModal(true);
+        }
+    });
 
     // ── Name suggestions ──────────────────────────────────────────
     const debouncedName = useDebounce(form.productName, 500);
@@ -188,10 +202,25 @@ export function ImportProductForm() {
                     onCapture={(file) => {
                         setField("imageUri", file.uri);
                         setField("imageFile", file);
+                        imageSearchMutation.mutate({ uri: file.uri, name: "product.jpg", type: "image/jpeg" });
                     }}
                     onClose={() => setShowCamera(false)}
                 />
             </Modal>
+
+            <SuggestionModal
+                visible={showSuggestionModal}
+                onClose={() => setShowSuggestionModal(false)}
+                products={similarProducts}
+                onAnalyzeResult={(product) => {
+                    setField("productName", product.productName);
+                    setField("category", product.category);
+                    setField("color", product.color);
+                    setField("pattern", product.pattern);
+                    createProductIdMutation.mutate(product.category);
+                }}
+                imageFile={form.imageFile!}
+            />
 
             <View className="gap-4">
                 {/* Image picker */}
@@ -204,6 +233,14 @@ export function ImportProductForm() {
                                 className="w-full aspect-square rounded-xl"
                                 resizeMode="cover"
                             />
+
+                            {imageSearchMutation.isPending && (
+                                <View className="absolute inset-0 bg-black/40 rounded-xl items-center justify-center gap-2">
+                                    <ActivityIndicator size="large" color="#fff" />
+                                    <Text className="text-white text-sm font-medium">Đang tìm sản phẩm tương tự...</Text>
+                                </View>
+                            )}
+
                             <TouchableOpacity
                                 className="absolute top-2 right-2 bg-white rounded-full w-8 h-8 items-center justify-center"
                                 onPress={() => { setField("imageUri", null); setField("imageFile", null); }}
