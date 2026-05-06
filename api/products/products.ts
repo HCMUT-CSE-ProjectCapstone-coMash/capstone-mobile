@@ -55,6 +55,41 @@ export async function OwnerCreateProduct(productData: CreateProduct) {
     return response.data;
 }
 
+export async function EmployeeCreateProduct(productData: CreateProduct, productsOrderId: string) {
+    const formData = new FormData();
+
+    formData.append("ProductName", productData.productName);
+    formData.append("Category", productData.category);
+    formData.append("Color", productData.color);
+    formData.append("Pattern", productData.pattern);
+    formData.append("SizeType", productData.sizeType);
+    formData.append("CreatedBy", productData.createdBy);
+    
+    productData.quantities.forEach((quantity, index) => {
+        formData.append(`Quantities[${index}].Size`, quantity.size);
+        formData.append(`Quantities[${index}].Quantities`, quantity.quantities.toString());
+    })
+
+    formData.append("Image", {
+        uri: productData.image.uri,
+        name: productData.image.name,
+        type: productData.image.type,
+    } as any);
+
+    const response = await axiosClient.post(
+        "/product/create/" + productsOrderId,
+        formData,
+        { 
+            withCredentials: true,
+            headers: {
+                "Content-Type": "multipart/form-data"
+            }
+        }
+    );
+
+    return response.data;
+}
+
 export async function SearchSimilarProduct(imageFile: RNFile) {
     const base64Image = await readAsStringAsync(imageFile.uri, {
         encoding: EncodingType.Base64,

@@ -1,4 +1,5 @@
-import { CreateProductIdByCategory, FetchApprovedProductByName, OwnerCreateProduct, SearchSimilarProduct } from "@/api/products/products";
+import { CreateProductIdByCategory, EmployeeCreateProduct, FetchApprovedProductByName, OwnerCreateProduct, SearchSimilarProduct } from "@/api/products/products";
+import { FetchOrCreateOrder } from "@/api/productsOrder/productsOrder";
 import { FormField } from "@/components/FormInputs/FormField";
 import { StyledSelectInput } from "@/components/FormInputs/StyledSelectInput";
 import { StyledTextInput } from "@/components/FormInputs/StyledTextInput";
@@ -53,6 +54,12 @@ const initialFormState: FormState = {
 export function ImportProductForm() {
     const dispatch = useDispatch();
     const user = useSelector((state: RootState) => state.user);
+
+    const { data: productsOrder } = useQuery({
+        queryKey: ["pendingProducts"],
+        queryFn: () => FetchOrCreateOrder(user.id!),
+        enabled: !!user.id,
+    });
 
     const [form, setForm] = useState<FormState>(initialFormState);
     const setField = <K extends keyof FormState>(key: K, value: FormState[K]) =>
@@ -142,7 +149,14 @@ export function ImportProductForm() {
     });
 
     const employeeCreateMutation = useMutation({
-        // TODO
+        mutationFn: ({ productData, productsOrderId }: { productData: CreateProduct, productsOrderId: string }) => EmployeeCreateProduct(productData, productsOrderId),
+        onSuccess: () => {
+            dispatch(addAlert({ type: "success", message: "Sản phẩm đã được thêm vào danh sách duyệt." }));
+            setForm(initialFormState);
+        },
+        onError: () => {
+            dispatch(addAlert({ type: "error", message: "Thêm sản phẩm thất bại. Vui lòng thử lại." }));
+        },
     });
 
     const isPending = ownerCreateMutation.isPending || employeeCreateMutation.isPending;
@@ -150,6 +164,8 @@ export function ImportProductForm() {
     // ── Submit ────────────────────────────────────────────────────
     const handleSubmit = () => {
         if (!user.id) return;
+
+        if (!productsOrder.id) return;
 
         if (!form.imageFile)    
             return dispatch(addAlert({ type: "warning", message: "Vui lòng chọn hình ảnh sản phẩm." }));
@@ -189,7 +205,10 @@ export function ImportProductForm() {
         if (user.role === "owner") {
             ownerCreateMutation.mutate(payload);
         } else {
-            employeeCreateMutation.mutate();
+            employeeCreateMutation.mutate({
+                productData: payload,
+                productsOrderId: productsOrder.id,
+            });
         }
     };
 
