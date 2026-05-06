@@ -1,18 +1,19 @@
 import { CreateProductIdByCategory, EmployeeCreateProduct, FetchApprovedProductByName, OwnerCreateProduct, SearchSimilarProduct } from "@/api/products/products";
-import { FetchOrCreateOrder } from "@/api/productsOrder/productsOrder";
 import { FormField } from "@/components/FormInputs/FormField";
 import { StyledSelectInput } from "@/components/FormInputs/StyledSelectInput";
 import { StyledTextInput } from "@/components/FormInputs/StyledTextInput";
 import { categories, colors, patterns, sizesLetter, sizesNumber } from "@/constants/products";
 import { useDebounce } from "@/hooks/useDebounce";
 import { addAlert } from "@/stores/alertStore";
+import { setEditingProduct } from "@/stores/productEditStore";
 import { RootState } from "@/stores/store";
-import { CreateProduct, Product, ProductWithOrderStatus, RNFile } from "@/types/Product";
+import { CreateProduct, ProductWithOrderStatus, RNFile } from "@/types/Product";
 import { formatThousands, parseFormattedNumber } from "@/utilities/numberFormat";
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import * as ImageManipulator from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
+import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import { ActivityIndicator, Alert, FlatList, Image, Modal, ScrollView, Switch, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
@@ -52,14 +53,10 @@ const initialFormState: FormState = {
 };
 
 export function ImportProductForm() {
+    const router = useRouter();
     const dispatch = useDispatch();
     const user = useSelector((state: RootState) => state.user);
-
-    const { data: productsOrder } = useQuery({
-        queryKey: ["pendingProducts"],
-        queryFn: () => FetchOrCreateOrder(user.id!),
-        enabled: !!user.id,
-    });
+    const productsOrder = useSelector((state: RootState) => state.productsOrder.productsOrder);
 
     const [form, setForm] = useState<FormState>(initialFormState);
     const setField = <K extends keyof FormState>(key: K, value: FormState[K]) =>
@@ -165,7 +162,7 @@ export function ImportProductForm() {
     const handleSubmit = () => {
         if (!user.id) return;
 
-        if (!productsOrder.id) return;
+        if (user.role !== "owner" && !productsOrder?.id) return;
 
         if (!form.imageFile)    
             return dispatch(addAlert({ type: "warning", message: "Vui lòng chọn hình ảnh sản phẩm." }));
@@ -207,7 +204,7 @@ export function ImportProductForm() {
         } else {
             employeeCreateMutation.mutate({
                 productData: payload,
-                productsOrderId: productsOrder.id,
+                productsOrderId: productsOrder!.id,
             });
         }
     };
@@ -239,12 +236,25 @@ export function ImportProductForm() {
                     createProductIdMutation.mutate(product.category);
                 }}
                 imageFile={form.imageFile!}
+                productsOrdersId={productsOrder?.id || ""}
             />
 
             <View className="gap-4">
                 {/* Image picker */}
                 <View>
-                    <Text className="text-sm text-gray-500 mb-2">Hình ảnh sản phẩm</Text>
+                    <View className="flex-row items-center justify-between mb-3">
+                        <Text className="text-sm text-gray-500">Hình ảnh sản phẩm</Text>
+
+                        {user.role === "employee" && (
+                            <TouchableOpacity 
+                                className="px-3 py-2 rounded-xl items-center border border-gray-500 bg-white"
+                                onPress={() => router.push("/(nhan-vien)/approval-list")}
+                            >
+                                <Text className="text-xs text-gray-500">Danh sách duyệt</Text>
+                            </TouchableOpacity>
+                        )}
+                    </View>
+
                     {form.imageUri ? (
                         <View className="relative">
                             <Image
@@ -308,16 +318,23 @@ export function ImportProductForm() {
                             keyboardShouldPersistTaps="handled"
                             nestedScrollEnabled
                         >
-                            {suggestions.map((item: Product) => (
-                                <TouchableOpacity
-                                    key={item.id}
-                                    className="px-3 py-3 border-b border-gray-50 flex-row items-center gap-3"
-                                    onPress={() => { setField("productName", item.productName); setShowSuggestions(false); }}
-                                >
-                                    <Image source={{ uri: item.imageURL }} className="w-8 h-8 rounded" resizeMode="cover" />
-                                    <Text className="text-sm flex-1">{item.productName}</Text>
-                                </TouchableOpacity>
-                            ))}
+                            {suggestions.map((item: ProductWithOrderStatus) => {
+                                const disabled = item.isInPendingOrder;
+                                return (
+                                    <TouchableOpacity
+                                        key={item.id}
+                                        className={`px-3 py-3 border-b border-gray-50 flex-row items-center gap-3 ${disabled ? "opacity-50" : ""}`}
+                                        onPress={() => !disabled && dispatch(setEditingProduct(item))}
+                                        activeOpacity={disabled ? 1 : 0.7}
+                                    >
+                                        <Image source={{ uri: item.imageURL }} className="w-8 h-8 rounded" resizeMode="cover" />
+                                        <Text className="text-sm flex-1">{item.productName}</Text>
+                                        {disabled && (
+                                            <Text className="text-xs text-pink">Đang chờ duyệt</Text>
+                                        )}
+                                    </TouchableOpacity>
+                                );
+                            })}
                         </ScrollView>
                     )}
                 </FormField>

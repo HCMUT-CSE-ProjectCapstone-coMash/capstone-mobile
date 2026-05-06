@@ -1,11 +1,43 @@
+import { FetchOrCreateOrder } from "@/api/productsOrder/productsOrder";
 import { ImportProductForm } from "@/components/Forms/ImportProductForm";
+import { UpdateProductInProductsOrderForm } from "@/components/Forms/UpdateProductInProductsOrderForm";
+import { setProductsOrder } from "@/stores/productsOrderStore";
+import { RootState } from "@/stores/store";
+import { ProductsOrder } from "@/types/productsOrder";
 import { Ionicons } from "@expo/vector-icons";
+import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
+import { useEffect } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useDispatch, useSelector } from "react-redux";
 
 export default function ImportProductScreen() {
     const router = useRouter();
+    const dispatch = useDispatch();
+    const user = useSelector((state: RootState) => state.user);
+    const editProduct = useSelector((state: RootState) => state.productEdit.editingProduct);
+
+    const { data } = useQuery({
+        queryKey: ["pendingProducts"],
+        queryFn: () => FetchOrCreateOrder(user.id!),
+        enabled: !!user.id,
+    });
+
+    useEffect(() => {
+        if (data) {
+            const order: ProductsOrder = {
+                id: data.id,
+                createdBy: data.createdBy,
+                createdAt: data.createdAt,
+                orderName: data.orderName,
+                orderDescription: data.orderDescription,
+                orderStatus: data.orderStatus,
+                products: data.products,
+            };
+            dispatch(setProductsOrder(order));
+        }
+    }, [data, dispatch]);
 
     return (
         <KeyboardAvoidingView
@@ -25,7 +57,11 @@ export default function ImportProductScreen() {
                     </TouchableOpacity>
                     <Text className="text-xl font-semibold">Thêm sản phẩm mới</Text>
                 </View>
-                <ImportProductForm />
+                {editProduct ? (
+                    <UpdateProductInProductsOrderForm editProduct={editProduct}/>
+                ): (
+                    <ImportProductForm />
+                )}
             </ScrollView>
         </KeyboardAvoidingView>
     );

@@ -1,4 +1,6 @@
 import { Logout } from "@/api/authentication/auth";
+import { clearEditingProduct } from "@/stores/productEditStore";
+import { clearProductsOrder } from "@/stores/productsOrderStore";
 import { RootState } from "@/stores/store";
 import { clearUser } from "@/stores/userStore";
 import { formatDate } from "@/utilities/timeFormat";
@@ -24,6 +26,8 @@ export function ProfileScreen() {
         onSettled: async () => {
             await SecureStore.deleteItemAsync("accessToken");
             dispatch(clearUser());
+            dispatch(clearEditingProduct());
+            dispatch(clearProductsOrder());
             router.replace("/login");
         },
     });

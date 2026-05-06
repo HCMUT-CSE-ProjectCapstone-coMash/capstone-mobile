@@ -1,5 +1,6 @@
 import { configureStore } from "@reduxjs/toolkit";
 import alertReducer from "./alertStore";
+import productEditReducer from "./productEditStore";
 import productsOrderReducer from "./productsOrderStore";
 import userReducer from "./userStore";
 
@@ -7,7 +8,8 @@ export const stores = configureStore({
     reducer: {
         user: userReducer,
         alert: alertReducer,
-        productsOrder: productsOrderReducer
+        productsOrder: productsOrderReducer,
+        productEdit: productEditReducer,
     }
 });
 

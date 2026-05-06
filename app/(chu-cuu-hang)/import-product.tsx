@@ -1,11 +1,15 @@
 import { ImportProductForm } from "@/components/Forms/ImportProductForm";
+import { UpdateProductForm } from "@/components/Forms/UpdateProductForm";
+import { RootState } from "@/stores/store";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { KeyboardAvoidingView, Platform, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useSelector } from "react-redux";
 
 export default function ImportProductScreen() {
     const router = useRouter();
+    const editProduct = useSelector((state: RootState) => state.productEdit.editingProduct);
 
     return (
         <KeyboardAvoidingView
@@ -25,7 +29,11 @@ export default function ImportProductScreen() {
                     </TouchableOpacity>
                     <Text className="text-xl font-semibold">Thêm sản phẩm mới</Text>
                 </View>
-                <ImportProductForm />
+                {editProduct ? (
+                    <UpdateProductForm editProduct={editProduct}/>
+                ): (
+                    <ImportProductForm />
+                )}
             </ScrollView>
         </KeyboardAvoidingView>
     );

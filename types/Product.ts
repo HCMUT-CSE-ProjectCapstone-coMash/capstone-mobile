@@ -46,6 +46,19 @@ export interface CreateProduct {
     salePrice: number,
 }
 
+export interface UpdateProduct {
+    productId?: string,
+    productName?: string,
+    category?: string,
+    color?: string,
+    pattern?: string,
+    sizeType?: "Letter" | "Number",
+    quantities?: ProductQuantity[],
+    image?: File | null,
+    importPrice?: number,
+    salePrice?: number,
+}
+
 export interface ProductWithOrderStatus {
     id: string,
     productId: string

@@ -8,9 +8,10 @@ interface StyledSelectInputProps {
     value: string,
     options: { label: string; value: string }[],
     onSelect: (v: string) => void
+    editable?: boolean
 }
 
-export function StyledSelectInput({ label, value, options, onSelect } : StyledSelectInputProps) {
+export function StyledSelectInput({ label, value, options, onSelect, editable = true } : StyledSelectInputProps) {
     const [open, setOpen] = useState(false);
     const display = options.find((o) => o.value === value)?.label ?? "Chọn...";
 
@@ -19,10 +20,13 @@ export function StyledSelectInput({ label, value, options, onSelect } : StyledSe
             <FormField label={label}>
                 <TouchableOpacity
                     className="border border-gray-200 rounded-lg px-3 py-2.5 flex-row justify-between items-center"
-                    onPress={() => setOpen(true)}
+                    onPress={() => editable && setOpen(true)}
+                    activeOpacity={editable ? 0.7 : 1}       
                 >
-                    <Text className={`text-sm ${value ? "text-black" : "text-gray-400"}`}>{display}</Text>
-                    <Ionicons name="chevron-down" size={12} color="#9ca3af" />
+                    <Text className={`text-sm ${value && editable ? "text-black" : "text-gray-500"}`}>
+                        {display}
+                    </Text>
+                    {editable && <Ionicons name="chevron-down" size={12} color="#9ca3af" />}
                 </TouchableOpacity>
             </FormField>
 

@@ -1,4 +1,4 @@
-import { CreateProduct, RNFile } from "@/types/Product";
+import { CreateProduct, RNFile, UpdateProduct } from "@/types/Product";
 import { EncodingType, readAsStringAsync } from "expo-file-system/legacy";
 import { axiosClient } from "../axiosClient";
 
@@ -111,6 +111,64 @@ export async function AnalyzeImage(imageFile: RNFile) {
     const response = await axiosClient.post(
         "/product/analyze",
         { ImageBase64: base64Image },
+    );
+
+    return response.data;
+}
+
+export async function OwnerUpdateProductInProductsOrder(productId: string, productsOrderId: string, updateData: UpdateProduct) {
+    const formData = new FormData();
+
+    if (updateData.productName) formData.append("ProductName", updateData.productName);
+    if (updateData.color) formData.append("Color", updateData.color);
+    if (updateData.pattern) formData.append("Pattern", updateData.pattern);
+    if (updateData.sizeType) formData.append("SizeType", updateData.sizeType);
+    if (updateData.importPrice) formData.append("ImportPrice", updateData.importPrice.toString());
+    if (updateData.salePrice) formData.append("SalePrice", updateData.salePrice.toString());
+    
+    if (updateData.quantities) {
+        updateData.quantities.forEach((quantity, index) => {
+            formData.append(`Quantities[${index}].Size`, quantity.size);
+            formData.append(`Quantities[${index}].Quantities`, quantity.quantities.toString());
+        })
+    }
+
+    const response = await axiosClient.patch(
+        `/product/owner-patch-in-products-order/${productId}/${productsOrderId}`,
+        formData,
+        { 
+            headers: {
+                "Content-Type": "multipart/form-data"
+            }
+        }
+    );
+
+    return response.data;
+}
+
+export async function EmployeeUpdateProductInProductsOrder(productId: string, productsOrderId: string, updateData: UpdateProduct) {
+    const formData = new FormData();
+
+    if (updateData.productName) formData.append("ProductName", updateData.productName);
+    if (updateData.color) formData.append("Color", updateData.color);
+    if (updateData.pattern) formData.append("Pattern", updateData.pattern);
+    if (updateData.sizeType) formData.append("SizeType", updateData.sizeType);
+    
+    if (updateData.quantities) {
+        updateData.quantities.forEach((quantity, index) => {
+            formData.append(`Quantities[${index}].Size`, quantity.size);
+            formData.append(`Quantities[${index}].Quantities`, quantity.quantities.toString());
+        })
+    }
+
+    const response = await axiosClient.patch(
+        `/product/employee-patch-in-products-order/${productId}/${productsOrderId}`,
+        formData,
+        { 
+            headers: {
+                "Content-Type": "multipart/form-data"
+            }
+        }
     );
 
     return response.data;

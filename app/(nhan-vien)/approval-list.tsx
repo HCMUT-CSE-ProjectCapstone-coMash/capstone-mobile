@@ -1,13 +1,16 @@
-import { FetchOrCreateOrder } from "@/api/productsOrder/productsOrder";
+import { DeleteProductFromProductsOrders, FetchOrCreateOrder } from "@/api/productsOrder/productsOrder";
+import { addAlert } from "@/stores/alertStore";
+import { setEditingProduct } from "@/stores/productEditStore";
 import { setProductsOrder } from "@/stores/productsOrderStore";
 import { RootState } from "@/stores/store";
 import { Product } from "@/types/Product";
 import { ProductsOrder } from "@/types/productsOrder";
-import { Ionicons } from "@expo/vector-icons";
-import { useQuery } from "@tanstack/react-query";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { FlatList, Image, KeyboardAvoidingView, Platform, Text, TouchableOpacity, View } from "react-native";
+import ReanimatedSwipeable, { SwipeableMethods } from "react-native-gesture-handler/ReanimatedSwipeable";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useDispatch, useSelector } from "react-redux";
 
@@ -40,21 +43,71 @@ function QuantityInfo({ product }: { product: Product }) {
 }
 
 function ProductCard({ product }: { product: Product }) {
-    return (
-        <View className="flex-row items-center bg-white border border-gray-100 rounded-xl px-4 py-3 mb-3 shadow-sm">
-            <Image
-                source={{ uri: product.imageURL }}
-                className="w-16 h-16 rounded-lg bg-gray-100"
-                resizeMode="cover"
-            />
-            <View className="flex-1 ml-3">
-                <Text className="text-xs text-gray-400 mb-0.5">{product.productId}</Text>
-                <Text className="text-sm font-semibold text-gray-800" numberOfLines={1}>
-                    {product.productName}
-                </Text>
-                <QuantityInfo product={product} />
-            </View>
+    const router = useRouter();
+    const dispatch = useDispatch();
+    const queryClient = useQueryClient();
+    const productsOrder = useSelector((state: RootState) => state.productsOrder.productsOrder);
+    const swipeableRef = useRef<SwipeableMethods>(null);
+
+    const deleteMutation = useMutation({
+        mutationFn: ({ orderId, productId } : { orderId: string, productId: string}) => DeleteProductFromProductsOrders(orderId, productId),
+
+        onSuccess: () => {
+            dispatch(addAlert({ type: "success", message: "Xoá sản phẩm thành công" }));
+            queryClient.invalidateQueries({ queryKey: ["pendingProducts"] });
+        },
+
+        onError: () => {
+            dispatch(addAlert({ type: "error", message: "Xoá sản phẩm thất bại" }));
+        }
+    });
+
+    const renderRightActions = () => (
+        <View className="flex-row mb-3">
+            <TouchableOpacity
+                className="bg-red w-16 items-center justify-center rounded-r-xl"
+                onPress={() => {
+                    if (!productsOrder?.id) return;
+                    swipeableRef.current?.close();
+                    deleteMutation.mutate({ orderId: productsOrder.id, productId: product.id });
+                }}
+            >
+                <Ionicons name="trash-outline" size={22} color="#fff" />
+            </TouchableOpacity>
         </View>
+    );
+
+    return (
+        <ReanimatedSwipeable
+            ref={swipeableRef}
+            renderRightActions={renderRightActions}
+            overshootRight={false}
+        >
+            <View className="flex-row items-center bg-white border border-gray-100 rounded-xl px-4 py-3 mb-3 shadow-sm">
+                <Image
+                    source={{ uri: product.imageURL }}
+                    className="w-16 h-16 rounded-lg bg-gray-100"
+                    resizeMode="cover"
+                />
+                <View className="flex-1 ml-3">
+                    <Text className="text-xs text-gray-400 mb-0.5">{product.productId}</Text>
+                    <Text className="text-sm font-semibold text-gray-800" numberOfLines={1}>
+                        {product.productName}
+                    </Text>
+                    <QuantityInfo product={product} />
+                </View>
+
+                <TouchableOpacity
+                    className="ml-3 p-2"
+                    onPress={() => {
+                        dispatch(setEditingProduct(product));
+                        router.replace("/(nhan-vien)/import-product");
+                    }}
+                >
+                    <MaterialCommunityIcons name="pencil" size={24} color="#ec4899" />
+                </TouchableOpacity>
+            </View>
+        </ReanimatedSwipeable>
     );
 }
 
