@@ -1,15 +1,17 @@
-import { DeleteProductFromProductsOrders, FetchOrCreateOrder } from "@/api/productsOrder/productsOrder";
+import { DeleteProductFromProductsOrders, FetchOrCreateOrder, PatchOrderAndStatus } from "@/api/productsOrder/productsOrder";
+import { FormField } from "@/components/FormInputs/FormField";
+import { StyledTextInput } from "@/components/FormInputs/StyledTextInput";
 import { addAlert } from "@/stores/alertStore";
 import { setEditingProduct } from "@/stores/productEditStore";
 import { setProductsOrder } from "@/stores/productsOrderStore";
 import { RootState } from "@/stores/store";
 import { Product } from "@/types/Product";
-import { ProductsOrder } from "@/types/productsOrder";
+import { ProductsOrder, UpdateProductsOrder } from "@/types/productsOrder";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
-import { useEffect, useRef } from "react";
-import { FlatList, Image, KeyboardAvoidingView, Platform, Text, TouchableOpacity, View } from "react-native";
+import React, { useEffect, useRef, useState } from "react";
+import { ActivityIndicator, FlatList, Image, KeyboardAvoidingView, Modal, Platform, Text, TouchableOpacity, View } from "react-native";
 import ReanimatedSwipeable, { SwipeableMethods } from "react-native-gesture-handler/ReanimatedSwipeable";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useDispatch, useSelector } from "react-redux";
@@ -117,6 +119,11 @@ export default function PendingApprovalScreen() {
     const user = useSelector((state: RootState) => state.user);
     const productsOrder = useSelector((state: RootState) => state.productsOrder.productsOrder);
 
+    const [showConfirmModal, setShowConfirmModal] = useState(false);
+    const [orderName, setOrderName] = useState("");
+    const [orderDescription, setOrderDescription] = useState("");
+    const [isCompleted, setIsCompleted] = useState(false);
+
     const { data, isLoading } = useQuery({
         queryKey: ["pendingProducts"],
         queryFn: () => FetchOrCreateOrder(user.id!),
@@ -140,11 +147,115 @@ export default function PendingApprovalScreen() {
 
     const products = productsOrder?.products ?? [];
 
+    const patchMutation = useMutation({
+        mutationFn: ({ orderId, updateData }: { orderId: string, updateData: UpdateProductsOrder }) => PatchOrderAndStatus(orderId, updateData),
+
+        onSuccess: () => {
+            setIsCompleted(true);
+            dispatch(addAlert({ type: "success", message: "Tạo đơn duyệt thành công"}));
+        },
+
+        onError: () => {
+            dispatch(addAlert({ type: "error", message: "Tạo đơn duyệt thất bại" }));
+        }
+    });
+
+    const handleSubmitOrder = () => {
+        if (!productsOrder?.id) return;
+        if (!orderName) {
+            dispatch(addAlert({ type: "warning", message: "Vui lòng nhập tên danh sách" }));
+            return;
+        }
+
+        patchMutation.mutate({
+            orderId: productsOrder.id,
+            updateData: { orderName, orderDescription, orderStatus: "Sending" },
+        });
+    }
+
     return (
         <KeyboardAvoidingView
             style={{ flex: 1, backgroundColor: "white" }}
             behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
+            <Modal 
+                transparent
+                animationType="fade"
+                visible={showConfirmModal}
+                onRequestClose={() => { if (!isCompleted) setShowConfirmModal(false); }}
+            >
+                <View className="flex-1 bg-black/40 items-center justify-center px-5">
+                    <View className="bg-white rounded-2xl p-5 w-full gap-5">
+                        {!isCompleted ? (
+                            <>
+                                <Text className="text-base font-semibold text-center text-gray-800">
+                                    Tạo danh sách sản phẩm cần duyệt mới
+                                </Text>
+
+                                {/* Order name */}
+                                <FormField label="Tên danh sách">
+                                    <StyledTextInput
+                                        value={orderName}
+                                        onChangeText={setOrderName}
+                                        placeholder="Nhập tên danh sách"
+                                    />
+                                </FormField>
+
+                                {/* Description */}
+                                <FormField label="Mô tả (Nếu có)">
+                                    <StyledTextInput
+                                        value={orderDescription}
+                                        onChangeText={setOrderDescription}
+                                        placeholder="Nhập mô tả"
+                                    />
+                                </FormField>
+
+                                {/* Buttons */}
+                                <View className="flex-row gap-3 mt-1">
+                                    <TouchableOpacity
+                                        className="flex-1 py-2.5 rounded-xl border border-gray-200 items-center"
+                                        onPress={() => setShowConfirmModal(false)}
+                                    >
+                                        <Text className="text-sm text-gray-600">Huỷ</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        className={`flex-1 py-2.5 rounded-xl items-center ${patchMutation.isPending ? "bg-pink/50" : "bg-pink"}`}
+                                        onPress={handleSubmitOrder}
+                                        disabled={patchMutation.isPending}
+                                    >
+                                        {patchMutation.isPending ? (
+                                            <View className="flex-row items-center gap-2">
+                                                <ActivityIndicator size="small" color="#fff" />
+                                                <Text className="text-sm text-white">Đang gửi...</Text>
+                                            </View>
+                                        ) : (
+                                            <Text className="text-sm text-white font-medium">Gửi yêu cầu</Text>
+                                        )}
+                                    </TouchableOpacity>
+                                </View>
+                            </>
+                        ) : (
+                            <View className="items-center gap-5 py-4">
+                                <View className="bg-pink/20 p-4 rounded-full">
+                                    <Ionicons name="checkmark" size={48} color="#ec4899" />
+                                </View>
+                                <Text className="text-base text-gray-800 font-medium">Yêu cầu của bạn đã được gửi!</Text>
+                                <TouchableOpacity
+                                    className="bg-pink py-2.5 px-6 rounded-xl"
+                                    onPress={() => {
+                                        setShowConfirmModal(false);
+                                        setIsCompleted(false);
+                                        router.replace("/(nhan-vien)/(tabs)");
+                                    }}
+                                >
+                                    <Text className="text-white text-sm font-medium">Về trang chủ</Text>
+                                </TouchableOpacity>
+                            </View>
+                        )}
+                    </View>
+                </View>
+            </Modal>
+
             <SafeAreaView edges={["top"]} style={{ backgroundColor: "white" }} />
             <View className="flex-1 px-6">
                 {/* Header */}
@@ -180,6 +291,7 @@ export default function PendingApprovalScreen() {
                 <TouchableOpacity
                     disabled={products.length === 0}
                     className="bg-purple rounded-xl py-3 mb-12 items-center disabled:opacity-50"
+                    onPress={() => setShowConfirmModal(true)}
                 >
                     <Text className="text-white font-semibold text-sm">Yêu cầu duyệt</Text>
                 </TouchableOpacity>
