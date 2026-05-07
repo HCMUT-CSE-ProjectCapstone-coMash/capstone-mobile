@@ -48,7 +48,7 @@ export function CameraCapture({ onCapture, onClose }: CameraCaptureProps) {
                 </View>
                 <View className="px-6 gap-2">
                     <TouchableOpacity
-                        className="bg-pink-500 py-3.5 rounded-2xl items-center"
+                        className="bg-pink py-3.5 rounded-2xl items-center"
                         onPress={requestPermission}
                     >
                         <Text className="text-white font-semibold text-[15px]">Cấp quyền</Text>

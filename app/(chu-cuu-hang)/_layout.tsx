@@ -11,6 +11,12 @@ export default function Layout() {
                 }}
             />
             <Stack.Screen
+                name="capture-product"
+                options={{
+                    title: "Chụp sản phẩm",
+                }}
+            />
+            <Stack.Screen
                 name="import-product"
                 options={{
                     title: "Nhập hàng",

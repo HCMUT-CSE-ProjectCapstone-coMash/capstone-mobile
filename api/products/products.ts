@@ -205,3 +205,30 @@ export async function OwnerUpdateProduct(updateData: UpdateProduct, productId: s
 
     return response.data;
 }
+
+export async function AnalyzeImageAndCreate(imageFile: RNFile) {
+    const formData = new FormData();
+
+    const base64Image = await readAsStringAsync(imageFile.uri, {
+        encoding: EncodingType.Base64,
+    });
+
+    formData.append("ImageBase64", base64Image);
+    formData.append("Image", {
+        uri: imageFile.uri,
+        name: imageFile.name,
+        type: imageFile.type,
+    } as any);
+
+    const response = await axiosClient.post(
+        "/product/create-temporary",
+        formData,
+        {
+            headers: {
+                "Content-Type": "multipart/form-data"
+            }
+        }
+    );
+
+    return response.data;
+}
