@@ -1,4 +1,4 @@
-import { CreateProductIdByCategory, EmployeeCreateProduct, FetchApprovedProductByName, OwnerCreateProduct, SearchSimilarProduct } from "@/api/products/products";
+import { AnalyzeImage, CreateProductIdByCategory, EmployeeCreateProduct, FetchApprovedProductByName, OwnerCreateProduct, SearchSimilarProduct } from "@/api/products/products";
 import { FormField } from "@/components/FormInputs/FormField";
 import { StyledSelectInput } from "@/components/FormInputs/StyledSelectInput";
 import { StyledTextInput } from "@/components/FormInputs/StyledTextInput";
@@ -112,9 +112,28 @@ export function ImportProductForm() {
     const imageSearchMutation = useMutation({
         mutationFn: (imageFile: RNFile) => SearchSimilarProduct(imageFile),
         onSuccess: (data) => {
-            setSimilarProducts(data);
-            setShowSuggestionModal(true);
+            if (data.length === 0) {
+                if (form.imageFile) {
+                    analyzeImageMutation.mutate(form.imageFile);
+                }
+            } else {
+                setSimilarProducts(data);
+                setShowSuggestionModal(true);
+            }
         }
+    });
+
+    // -─ Image analysis ─────────────────────────────────────────────
+    const analyzeImageMutation = useMutation({
+        mutationFn: (imageFile: RNFile) => AnalyzeImage(imageFile),
+        onSuccess: (data) => {
+            setField("productName", data.productName);
+            setField("category", data.category);
+            setField("color", data.color);
+            setField("pattern", data.pattern);
+            createProductIdMutation.mutate(data.category);
+        },
+        onError: () => {}
     });
 
     // ── Name suggestions ──────────────────────────────────────────
@@ -267,6 +286,13 @@ export function ImportProductForm() {
                                 <View className="absolute inset-0 bg-black/40 rounded-xl items-center justify-center gap-2">
                                     <ActivityIndicator size="large" color="#fff" />
                                     <Text className="text-white text-sm font-medium">Đang tìm sản phẩm tương tự...</Text>
+                                </View>
+                            )}
+
+                            {analyzeImageMutation.isPending && (
+                                <View className="absolute inset-0 bg-black/40 rounded-xl items-center justify-center gap-2">
+                                    <ActivityIndicator size="large" color="#fff" />
+                                    <Text className="text-white text-sm font-medium">Đang tạo sản phẩm...</Text>
                                 </View>
                             )}
 
