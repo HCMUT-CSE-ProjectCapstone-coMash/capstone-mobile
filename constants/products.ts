@@ -16,6 +16,7 @@ export const colors = [
     { label: "Tím", value: "Tím" },
     { label: "Hồng", value: "Hồng" },
     { label: "Nâu", value: "Nâu" },
+    { label: "Xám", value: "Xám" },
 ];
  
 export const patterns = [
