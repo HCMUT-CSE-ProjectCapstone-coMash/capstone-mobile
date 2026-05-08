@@ -1,5 +1,6 @@
 import { AnalyzeImageAndCreate, SearchSimilarProduct } from "@/api/products/products";
 import { addAlert } from "@/stores/alertStore";
+import { RootState } from "@/stores/store";
 import { ProductWithOrderStatus, RNFile } from "@/types/Product";
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation } from "@tanstack/react-query";
@@ -9,7 +10,7 @@ import { useRouter } from "expo-router";
 import React, { useRef, useState } from "react";
 import { ActivityIndicator, Image, Modal, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 
 interface FormState {
     imageFile: { uri: string; name: string; type: string } | null;
@@ -29,6 +30,7 @@ export function CaptureProductScreen() {
     const router = useRouter();
     const dispatch = useDispatch();
     const insets = useSafeAreaInsets();
+    const user = useSelector((state: RootState) => state.user);
     
     const [permission, requestPermission] = useCameraPermissions();
     const [capturing, setCapturing] = useState(false);
@@ -50,8 +52,8 @@ export function CaptureProductScreen() {
         mutationFn: (imageFile: RNFile) => SearchSimilarProduct(imageFile),
         onSuccess: (data) => {
             if (data.length === 0) {
-                if (form.imageFile) {
-                    analyzeImageMutation.mutate(form.imageFile);
+                if (form.imageFile && user.id) {
+                    analyzeImageMutation.mutate({ imageFile: form.imageFile, userId: user.id });
 
                     dispatch(addAlert({ type: "success", message: "Đã gửi sản phẩm mới" }));
 
@@ -68,7 +70,7 @@ export function CaptureProductScreen() {
     });
 
     const analyzeImageMutation = useMutation({
-        mutationFn: (imageFile: RNFile) => AnalyzeImageAndCreate(imageFile),
+        mutationFn: ({ imageFile, userId } : { imageFile: RNFile, userId: string }) => AnalyzeImageAndCreate(imageFile, userId),
         onSuccess: () => {},
         onError: () => {}
     });
@@ -116,9 +118,9 @@ export function CaptureProductScreen() {
     };
 
     const handleCreateNew = () => {
-        if (!form.imageFile) return;
+        if (!form.imageFile || !user.id) return;
 
-        analyzeImageMutation.mutate(form.imageFile);
+        analyzeImageMutation.mutate({ imageFile: form.imageFile, userId: user.id });
 
         dispatch(addAlert({ type: "success", message: "Đã gửi sản phẩm mới" }));
 

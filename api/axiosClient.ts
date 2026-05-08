@@ -3,7 +3,7 @@ import * as SecureStore from "expo-secure-store";
 
 export const axiosClient = axios.create({
     // baseURL: "http://localhost:5194",
-    baseURL: "https://36cf-113-22-177-180.ngrok-free.app",
+    baseURL: "https://ed3d-113-161-74-172.ngrok-free.app",
     headers: {
         "Content-Type": "application/json",
     }

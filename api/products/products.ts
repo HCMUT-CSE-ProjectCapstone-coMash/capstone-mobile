@@ -206,7 +206,7 @@ export async function OwnerUpdateProduct(updateData: UpdateProduct, productId: s
     return response.data;
 }
 
-export async function AnalyzeImageAndCreate(imageFile: RNFile) {
+export async function AnalyzeImageAndCreate(imageFile: RNFile, userId: string) {
     const formData = new FormData();
 
     const base64Image = await readAsStringAsync(imageFile.uri, {
@@ -221,7 +221,7 @@ export async function AnalyzeImageAndCreate(imageFile: RNFile) {
     } as any);
 
     const response = await axiosClient.post(
-        "/product/create-temporary",
+        "/product/create-temporary/" + userId,
         formData,
         {
             headers: {
