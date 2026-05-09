@@ -11,7 +11,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 const ownerItems: MenuItem[] = [
     { label: "Chụp hàng", icon: "camera-outline", color: "#D4537E", bg: "#FBEAF0", route: "/(chu-cuu-hang)/capture-product" },
     { label: "Nhập hàng", icon: "cube-outline", color: "#185FA5", bg: "#E6F1FB", route: "/(chu-cuu-hang)/import-product" },
-    { label: "Danh sách chờ duyêt", icon: "checkmark-circle-outline", color: "#2E7D32", bg: "#E8F5E9", route: "/(chu-cuu-hang)/sale-order" },
+    { label: "Danh sách chờ duyêt", icon: "checkmark-circle-outline", color: "#2E7D32", bg: "#E8F5E9", route: "/(chu-cuu-hang)/products-order" },
     { label: "Tìm sản phẩm", icon: "qr-code-outline", color: "#534AB7", bg: "#EEEDFE", route: "/(chu-cuu-hang)/scan-product" },
 ];
 
