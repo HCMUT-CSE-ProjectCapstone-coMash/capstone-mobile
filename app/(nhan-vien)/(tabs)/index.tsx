@@ -13,7 +13,8 @@ import { useSelector } from "react-redux";
 const employeeItems: MenuItem[] = [
     { label: "Chụp hàng", icon: "camera-outline", color: "#D4537E", bg: "#FBEAF0", route: "/(nhan-vien)/capture-product" },
     { label: "Nhập hàng", icon: "cube-outline", color: "#185FA5", bg: "#E6F1FB", route: "/(nhan-vien)/import-product" },
-    { label: "Danh sách duyệt", icon: "checkmark-circle-outline", color: "#2E7D32", bg: "#E8F5E9", route: "/(nhan-vien)/approval-list" },
+    { label: "Danh sách duyệt", icon: "receipt-outline", color: "#B45309", bg: "#FEF3C7", route: "/(nhan-vien)/approval-list" },
+    { label: "Tìm sản phẩm", icon: "qr-code-outline", color: "#534AB7", bg: "#EEEDFE", route: "/(chu-cuu-hang)/scan-product" },
 ];
 
 export default function HomeScreen() {
