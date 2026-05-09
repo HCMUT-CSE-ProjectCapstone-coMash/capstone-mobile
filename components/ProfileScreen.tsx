@@ -3,6 +3,7 @@ import { clearEditingProduct } from "@/stores/productEditStore";
 import { clearProductsOrder } from "@/stores/productsOrderStore";
 import { RootState } from "@/stores/store";
 import { clearUser } from "@/stores/userStore";
+import { getInitials } from "@/utilities/stringFormat";
 import { formatDate } from "@/utilities/timeFormat";
 import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
@@ -45,9 +46,12 @@ export function ProfileScreen() {
                                 className="w-24 h-24 rounded-full"
                             />
                         ) : (
-                            <View className="w-24 h-24 rounded-full bg-pink items-center justify-center">
-                                <Text className="text-white text-3xl font-bold">
-                                    {user?.fullName?.charAt(0) ?? "?"}
+                            <View
+                                className="w-24 h-24 rounded-full items-center justify-center"
+                                style={{ backgroundColor: "#EEEDFE" }}
+                            >
+                                <Text className="text-3xl font-bold text-purple">
+                                    {user?.fullName ? getInitials(user.fullName) : "?"}
                                 </Text>
                             </View>
                         )}
