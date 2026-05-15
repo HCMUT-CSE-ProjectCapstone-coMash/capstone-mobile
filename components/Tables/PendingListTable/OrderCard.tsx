@@ -1,15 +1,9 @@
+import { DEFAULT_STATUS, STATUS_MAP } from "@/constants/productsOrderUI";
 import { ProductsOrderWithCreator } from "@/types/productsOrder";
 import { formatDate } from "@/utilities/timeFormat";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { Text, TouchableOpacity, View } from "react-native";
-
-const STATUS_MAP = {
-    Approved: { label: "Đã duyệt",  bg: "#EAF3DE", color: "#3B6D11" },
-    Sending:  { label: "Chờ duyệt", bg: "#E6F1FB", color: "#0C447C" },
-};
-
-const DEFAULT_STATUS = { label: "Chờ duyệt", bg: "#FAEEDA", color: "#633806" };
 
 export function OrderCard({ item }: { item: ProductsOrderWithCreator }) {
     const router = useRouter();

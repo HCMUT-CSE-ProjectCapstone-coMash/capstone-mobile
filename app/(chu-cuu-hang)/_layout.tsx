@@ -28,12 +28,6 @@ export default function Layout() {
                     title: "Danh sách chờ duyệt",
                 }}
             />
-            <Stack.Screen
-                name="products-order/[id]"
-                options={{
-                    title: "Chi tiết đơn nhập",
-                }}
-            />
         </Stack>
     )
 }
