@@ -23,6 +23,12 @@ export default function Layout() {
                 }}
             />
             <Stack.Screen
+                name="products-order"
+                options={{
+                    title: "Danh sách chờ duyệt",
+                }}
+            />
+            <Stack.Screen
                 name="search-product"
                 options={{
                     title: "Tìm sản phẩm",

@@ -10,6 +10,10 @@ export interface ProductsOrder {
     products: Product[]
 };
 
+export interface ProductsOrderWithCreator extends ProductsOrder {
+    createdByName: string
+};
+
 export interface UpdateProductsOrder {
     orderName?: string,
     orderDescription?: string,
