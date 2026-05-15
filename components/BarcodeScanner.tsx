@@ -124,7 +124,7 @@ export function BarcodeScanner({ onClose, onScanned, hintText = "Đưa mã vào 
                 />
             </View>
 
-            <View className="items-center justify-center gap-3 px-6 py-8">
+            <View className="items-center justify-center gap-3 px-4 py-8">
                 {scanned ? (
                     <View className="rounded-2xl bg-pink/10 px-4 py-3">
                         <Text className="text-sm font-medium text-pink">Mã đã quét, đang xử lý...</Text>
