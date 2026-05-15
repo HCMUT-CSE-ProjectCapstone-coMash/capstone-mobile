@@ -22,6 +22,12 @@ export default function Layout() {
                     title: "Nhập hàng",
                 }}
             />
+            <Stack.Screen
+                name="search-product"
+                options={{
+                    title: "Tìm sản phẩm",
+                }}
+            />
         </Stack>
     )
 }

@@ -116,6 +116,14 @@ export async function AnalyzeImage(imageFile: RNFile) {
     return response.data;
 }
 
+export async function FetchProductByProductId(productId: string) {
+    const response = await axiosClient.get(
+        "/product/fetch-by-productId/" + productId,
+    );
+
+    return response.data;
+}
+
 export async function OwnerUpdateProductInProductsOrder(productId: string, productsOrderId: string, updateData: UpdateProduct) {
     const formData = new FormData();
 
