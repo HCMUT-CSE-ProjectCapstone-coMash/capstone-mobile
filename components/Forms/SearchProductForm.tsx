@@ -73,7 +73,10 @@ export function SearchProductForm({ product }: SearchProductFormProps) {
             <View>
                 <View className="flex-row items-center justify-between py-1 mb-1">
                     <Text className="text-sm text-gray-700">Kích cỡ - Số lượng</Text>
-                    <Text className="text-sm text-gray-500">
+                    <Text
+                        numberOfLines={1}
+                        className="text-sm text-gray-500"
+                    >
                         {product.sizeType === "Number" ? "Size số" : "Size chữ"}
                     </Text>
                 </View>

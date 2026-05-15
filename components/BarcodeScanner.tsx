@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { CameraView, useCameraPermissions } from "expo-camera";
+import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 interface BarcodeScannerProps {
@@ -11,8 +12,10 @@ interface BarcodeScannerProps {
 }
 
 export function BarcodeScanner({ onClose, onScanned, hintText = "Đưa mã vào khung để tự động quét" }: BarcodeScannerProps) {
+    const router = useRouter();
     const [permission, requestPermission] = useCameraPermissions();
     const [scanned, setScanned] = useState(false);
+    const [manualText, setManualText] = useState("");
     const insets = useSafeAreaInsets();
 
     useEffect(() => {
@@ -22,8 +25,20 @@ export function BarcodeScanner({ onClose, onScanned, hintText = "Đưa mã vào 
     const handleBarCodeScanned = (result: { data: string }) => {
         if (scanned) return;
         setScanned(true);
-        onScanned(result.data);
+        onScanned(result.data.trim().toUpperCase());
     };
+
+    function parseProductIdFromBarcode(barcode: string) {
+        const cleaned = barcode.trim();
+        if (!cleaned) return "";
+        const parts = cleaned.split("-");
+        if (parts.length <= 1) return cleaned;
+        const lastPart = parts[parts.length - 1];
+        if (lastPart.length === 1 && /^[A-Z]$/i.test(lastPart)) {
+            return parts.slice(0, -1).join("-");
+        }
+        return cleaned;
+    }
 
     if (!permission) {
         return (
@@ -60,18 +75,45 @@ export function BarcodeScanner({ onClose, onScanned, hintText = "Đưa mã vào 
     return (
         <View className="flex-1 bg-white" style={{ paddingTop: insets.top + 12 }}>
             <TouchableOpacity
-                onPress={onClose}
+                onPress={() => router.push("/")}
                 className="self-start flex-row items-center gap-1.5 bg-gray-100 px-5 py-2 rounded-full"
             >
                 <Ionicons name="chevron-back" size={16} color="#6b7280" />
                 <Text className="text-gray-500 text-sm font-medium">Quay lại</Text>
             </TouchableOpacity>
 
-            <View className="mt-4 items-center px-4">
-                <Text className="text-gray-500 text-sm text-center">{hintText}</Text>
+            <View className="mt-4 px-4">
+                <TextInput
+                    className="py-3 text-sm text-gray-900 border border-gray-300 rounded-xl px-3 bg-white"
+                    placeholder="Nhập mã"
+                    placeholderTextColor="#9ca3af"
+                    value={manualText}
+                    onChangeText={(t) => {
+                        const upper = t.toUpperCase();
+                        setManualText(upper);
+                    }}
+                    autoCapitalize="characters"
+                    returnKeyType="search"
+                    onSubmitEditing={() => {
+                        const cleaned = manualText.trim().toUpperCase();
+                        if (!cleaned) return;
+                        const parsed = parseProductIdFromBarcode(cleaned);
+                        if (!parsed) return;
+                        setScanned(true);
+                        onScanned(parsed);
+                    }}
+                />
+                <View className="mt-3 items-center">
+                    <Text className="text-gray-500 text-sm text-center">{hintText}</Text>
+                </View>
             </View>
 
-            <View className="items-center mx-4 mt-6 overflow-hidden rounded-3xl border border-pink/20">
+            <View className="items-center mx-4 mt-6 border border-pink/20 relative">
+                <View className="absolute w-[22px] h-[22px] -top-1.5 -left-1.5 border-t-[3px] border-l-[3px] border-pink rounded-tl-md z-10" />
+                <View className="absolute w-[22px] h-[22px] -top-1.5 -right-1.5 border-t-[3px] border-r-[3px] border-pink rounded-tr-md z-10" />
+                <View className="absolute w-[22px] h-[22px] -bottom-1.5 -left-1.5 border-b-[3px] border-l-[3px] border-pink rounded-bl-md z-10" />
+                <View className="absolute w-[22px] h-[22px] -bottom-1.5 -right-1.5 border-b-[3px] border-r-[3px] border-pink rounded-br-md z-10" />
+                
                 <CameraView
                     style={{ width: "100%", height: 220 }}
                     facing="back"
