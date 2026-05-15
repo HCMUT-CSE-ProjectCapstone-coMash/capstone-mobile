@@ -31,12 +31,15 @@ export function BarcodeScanner({ onClose, onScanned, hintText = "Đưa mã vào 
     function parseProductIdFromBarcode(barcode: string) {
         const cleaned = barcode.trim();
         if (!cleaned) return "";
+
         const parts = cleaned.split("-");
         if (parts.length <= 1) return cleaned;
+
         const lastPart = parts[parts.length - 1];
         if (lastPart.length === 1 && /^[A-Z]$/i.test(lastPart)) {
             return parts.slice(0, -1).join("-");
         }
+        
         return cleaned;
     }
 
