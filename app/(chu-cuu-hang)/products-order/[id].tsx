@@ -1,19 +1,22 @@
+import { OwnerUpdateProductInProductsOrder } from "@/api/products/products";
 import { GetProductsOrderById } from "@/api/productsOrder/productsOrder";
 import { FormField } from "@/components/FormInputs/FormField";
 import { StyledSelectInput } from "@/components/FormInputs/StyledSelectInput";
 import { StyledTextInput } from "@/components/FormInputs/StyledTextInput";
 import { categories, colors, patterns, sizesLetter, sizesNumber } from "@/constants/products";
 import { DEFAULT_STATUS, STATUS_MAP } from "@/constants/productsOrderUI";
-import { Product } from "@/types/Product";
+import { addAlert } from "@/stores/alertStore";
+import { Product, UpdateProduct } from "@/types/Product";
 import { formatThousands, parseFormattedNumber } from "@/utilities/numberFormat";
 import { formatDate } from "@/utilities/timeFormat";
 import { Ionicons } from "@expo/vector-icons";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { Image, ScrollView, Switch, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Image, ScrollView, Switch, Text, TouchableOpacity, View } from "react-native";
 import { FlatList, TextInput } from "react-native-gesture-handler";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useDispatch } from "react-redux";
 
 interface FormState {
     productId: string;
@@ -63,9 +66,17 @@ const mapProductToForm = (product: Product): FormState => {
     };
 };
 
+interface UpdateProductPayload {
+    productId: string;
+    productOrderId: string;
+    updateData: UpdateProduct;
+};
+
 export default function SaleOrderDetail() {
     const { id } = useLocalSearchParams<{ id: string }>();
     const router = useRouter();
+    const dispatch = useDispatch();
+    const queryClient = useQueryClient();
     const [currentIndex, setCurrentIndex] = useState(0);
     const [form, setForm] = useState<FormState | null>(null);
 
@@ -75,8 +86,21 @@ export default function SaleOrderDetail() {
         enabled: !!id,
     });
 
+    const updateProductMutation = useMutation({
+        mutationFn: ({ productId, productOrderId, updateData } : UpdateProductPayload) => OwnerUpdateProductInProductsOrder(productId, productOrderId, updateData),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["saleOrderDetail", id] });
+            dispatch(addAlert({ type: "success", message: "Cập nhật sản phẩm thành công" }));
+        },
+        onError: () => {
+            dispatch(addAlert({ type: "error", message: "Cập nhật sản phẩm thất bại" }));
+        }
+    });
+
     const products: Product[] = data?.products ?? [];
     const product = products[currentIndex];
+
+    const isUnchanged = !!product && !!form && JSON.stringify(form) === JSON.stringify(mapProductToForm(product));
 
     useEffect(() => {
         if (product) {
@@ -109,6 +133,23 @@ export default function SaleOrderDetail() {
         const key = form.isNumberSize ? "numberQuantities" : "letterQuantities";
         setForm((prev) => prev ? { ...prev, [key]: { ...prev[key], [size]: value } } : prev);
     };
+
+    const handleUpdateProduct = () => {
+        const updateData: UpdateProduct = {
+            productName: form.productName,
+            color: form.color,
+            pattern: form.pattern,
+            sizeType: form.isNumberSize ? "Number" : "Letter",
+            importPrice: form.importPrice,
+            salePrice: form.salePrice,
+            quantities: sizes.map((size) => ({
+                size,
+                quantities: quantities[size] || 0
+            }))
+        }
+
+        updateProductMutation.mutate({ productId: product.id, productOrderId: id, updateData });
+    }
 
     return (
         <View className="flex-1 bg-white">
@@ -314,13 +355,19 @@ export default function SaleOrderDetail() {
                     {/* Action row — Save (outline) + Approve (filled, last product only) */}
                     <View className="flex-row gap-3">
                         <TouchableOpacity
-                            disabled={isApproved}
+                            disabled={isApproved || isUnchanged || updateProductMutation.isPending}
+                            onPress={handleUpdateProduct}
                             className={`flex-1 py-3 rounded-xl items-center border
-                                ${isApproved ? "border-gray-200 opacity-40" : "border-purple"}`}
+                                ${isApproved || isUnchanged ? "border-gray-200 opacity-40" : "border-purple"}`}
                         >
-                            <Text className={`font-semibold text-sm ${isApproved ? "text-gray-400" : "text-purple"}`}>
-                                Lưu sản phẩm
-                            </Text>
+                            {updateProductMutation.isPending ? (
+                                <ActivityIndicator size="small" color="#7c3aed" />
+                            ) : (
+                                <Text className={`font-semibold text-sm
+                                    ${isApproved || isUnchanged ? "text-gray-400" : "text-purple"}`}>
+                                    Lưu sản phẩm
+                                </Text>
+                            )}
                         </TouchableOpacity>
 
                         {!hasNext && !isApproved && (
