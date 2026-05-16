@@ -23,7 +23,7 @@ export function StyledSelectInput({ label, value, options, onSelect, editable = 
                     onPress={() => editable && setOpen(true)}
                     activeOpacity={editable ? 0.7 : 1}       
                 >
-                    <Text className={`text-sm ${value && editable ? "text-black" : "text-gray-500"}`}>
+                    <Text className={`text-sm text-black`}>
                         {display}
                     </Text>
                     {editable && <Ionicons name="chevron-down" size={12} color="#9ca3af" />}

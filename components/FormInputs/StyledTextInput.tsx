@@ -12,7 +12,7 @@ export function StyledTextInput({ value, onChangeText, placeholder = "", editabl
 
     return (
         <TextInput
-            className={`border border-gray-200 rounded-lg px-3 py-2.5 text-sm ${!editable ? "bg-gray-50 text-gray-400" : "bg-white"}`}
+            className="border border-gray-200 rounded-lg px-3 py-2.5 text-sm bg-white"
             value={value}
             onChangeText={onChangeText}
             placeholder={placeholder}

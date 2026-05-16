@@ -1,5 +1,5 @@
 import { OwnerUpdateProductInProductsOrder } from "@/api/products/products";
-import { GetProductsOrderById } from "@/api/productsOrder/productsOrder";
+import { ApproveProductsOrder, DeleteProductFromProductsOrders, DeleteProductsOrder, GetProductsOrderById } from "@/api/productsOrder/productsOrder";
 import { FormField } from "@/components/FormInputs/FormField";
 import { StyledSelectInput } from "@/components/FormInputs/StyledSelectInput";
 import { StyledTextInput } from "@/components/FormInputs/StyledTextInput";
@@ -8,7 +8,6 @@ import { DEFAULT_STATUS, STATUS_MAP } from "@/constants/productsOrderUI";
 import { addAlert } from "@/stores/alertStore";
 import { Product, UpdateProduct } from "@/types/Product";
 import { formatThousands, parseFormattedNumber } from "@/utilities/numberFormat";
-import { formatDate } from "@/utilities/timeFormat";
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -88,13 +87,50 @@ export default function SaleOrderDetail() {
     });
 
     const updateProductMutation = useMutation({
-        mutationFn: ({ productId, productOrderId, updateData } : UpdateProductPayload) => OwnerUpdateProductInProductsOrder(productId, productOrderId, updateData),
+        mutationFn: ({ productId, productOrderId, updateData }: UpdateProductPayload) =>
+            OwnerUpdateProductInProductsOrder(productId, productOrderId, updateData),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["saleOrderDetail", id] });
             dispatch(addAlert({ type: "success", message: "Cập nhật sản phẩm thành công" }));
         },
         onError: () => {
             dispatch(addAlert({ type: "error", message: "Cập nhật sản phẩm thất bại" }));
+        }
+    });
+
+    const deleteMutation = useMutation({
+        mutationFn: ({ productOrderId, productId }: { productOrderId: string; productId: string }) =>
+            DeleteProductFromProductsOrders(productOrderId, productId),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["saleOrderDetail", id] });
+            dispatch(addAlert({ type: "success", message: "Xoá sản phẩm thành công" }));
+            setCurrentIndex((prev) => Math.max(0, prev - 1));
+        },
+        onError: () => {
+            dispatch(addAlert({ type: "error", message: "Xoá sản phẩm thất bại" }));
+        }
+    });
+
+    const approveMutation = useMutation({
+        mutationFn: (orderId: string) => ApproveProductsOrder(orderId),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["products-orders-excluding-pending"] });
+            dispatch(addAlert({ type: "success", message: "Duyệt đơn hàng thành công" }));
+            router.back();
+        },
+        onError: () => {
+            dispatch(addAlert({ type: "error", message: "Duyệt đơn hàng thất bại" }));
+        }
+    });
+
+    const deleteOrderMutation = useMutation({
+        mutationFn: (orderId: string) => DeleteProductsOrder(orderId),
+        onSuccess: () => {
+            dispatch(addAlert({ type: "success", message: "Từ chối đơn thành công" }));
+            router.back();
+        },
+        onError: () => {
+            dispatch(addAlert({ type: "error", message: "Từ chối đơn thất bại" }));
         }
     });
 
@@ -147,10 +183,22 @@ export default function SaleOrderDetail() {
                 size,
                 quantities: quantities[size] || 0
             }))
-        }
+        };
 
         updateProductMutation.mutate({ productId: product.id, productOrderId: id, updateData });
-    }
+    };
+
+    const handleDeleteProduct = () => {
+        deleteMutation.mutate({ productOrderId: id, productId: product.id });
+    };
+
+    const handleDeclineOrder = () => {
+        deleteOrderMutation.mutate(id);
+    };
+
+    const handleApproveOrder = () => {
+        approveMutation.mutate(id);
+    };
 
     return (
         <View className="flex-1 bg-white">
@@ -170,40 +218,28 @@ export default function SaleOrderDetail() {
                 extraScrollHeight={16}
                 keyboardShouldPersistTaps="handled"
             >
-                {/* Order info */}
-                <View className="flex-row items-start justify-between gap-2">
-                    <Text className="font-semibold text-gray-900 flex-1">{data.orderName}</Text>
-                    <View className="px-2.5 py-1 rounded-full" style={{ backgroundColor: status.bg }}>
-                        <Text className="text-xs font-medium" style={{ color: status.color }}>
-                            {status.label}
-                        </Text>
-                    </View>
-                </View>
-
-                {data.orderDescription && (
-                    <Text className="text-sm text-gray-500">{data.orderDescription}</Text>
-                )}
-
-                <Text className="text-sm text-gray-500">
-                    Ngày tạo: {data.createdAt ? formatDate(data.createdAt) : "—"}
-                </Text>
-
-                {/* Divider */}
-                <View className="h-px bg-gray-300 my-1" />
-
                 {/* Product detail */}
                 {product && (
                     <View className="gap-4">
+
+                        {/* "Sản phẩm" label + delete icon on the same row */}
                         <View className="flex-row items-center justify-between">
                             <Text className="text-sm font-medium text-gray-700">Sản phẩm</Text>
-                            {isRestock ? (
-                                <View className="px-2.5 py-0.5 rounded-full">
-                                    <Text className="text-xs font-medium text-purple">Hàng nhập thêm</Text>
-                                </View>
-                            ) : (
-                                <View className="px-2.5 py-0.5 rounded-full">
-                                    <Text className="text-xs font-medium text-pink">Hàng mới</Text>
-                                </View>
+                            {!isApproved && (
+                                <TouchableOpacity
+                                    disabled={isApproved || deleteMutation.isPending}
+                                    onPress={handleDeleteProduct}
+                                    className={`px-5 py-3 rounded-lg border
+                                        ${isApproved ? "border-gray-200 opacity-40" : "border-red"}`}
+                                >
+                                    {deleteMutation.isPending ? (
+                                        <ActivityIndicator size="small" color="#f87171" />
+                                    ) : (
+                                        <Text className={`text-xs font-medium ${isApproved ? "text-gray-400" : "text-red"}`}>
+                                            Xoá sản phẩm
+                                        </Text>
+                                    )}
+                                </TouchableOpacity>
                             )}
                         </View>
 
@@ -215,11 +251,23 @@ export default function SaleOrderDetail() {
                             />
                         </View>
 
-                        <FormField label="Mã sản phẩm">
+                        <View className="gap-1">
+                            <View className="flex-row items-center justify-between">
+                                <Text className="text-sm text-gray-500">Mã sản phẩm</Text>
+                                {isRestock ? (
+                                    <View className="self-start px-2.5 py-0.5 rounded-full bg-purple/10">
+                                        <Text className="text-xs font-medium text-purple">Hàng nhập thêm</Text>
+                                    </View>
+                                ) : (
+                                    <View className="self-start px-2.5 py-0.5 rounded-full bg-pink/10">
+                                        <Text className="text-xs font-medium text-pink">Hàng mới</Text>
+                                    </View>
+                                )}
+                            </View>
                             <Text className="px-3 py-2 border border-gray-300 rounded-lg text-sm">
                                 {product.productId}
                             </Text>
-                        </FormField>
+                        </View>
 
                         {/* Product Name */}
                         <FormField label="Tên sản phẩm">
@@ -230,32 +278,32 @@ export default function SaleOrderDetail() {
                                 editable={!isApproved}
                             />
                         </FormField>
-            
+
                         {/* Selects */}
                         <StyledSelectInput
-                            label="Phân loại" 
-                            value={form.category} 
-                            options={categories} 
-                            onSelect={(v) => setField("category", v)} 
+                            label="Phân loại"
+                            value={form.category}
+                            options={categories}
+                            onSelect={(v) => setField("category", v)}
                             editable={false}
                         />
 
-                        <StyledSelectInput 
-                            label="Màu sắc" 
-                            value={form.color} 
-                            options={colors} 
+                        <StyledSelectInput
+                            label="Màu sắc"
+                            value={form.color}
+                            options={colors}
                             onSelect={(v) => setField("color", v)}
                             editable={!isApproved}
                         />
-            
-                        <StyledSelectInput 
-                            label="Hoạ tiết" 
-                            value={form.pattern} 
-                            options={patterns} 
+
+                        <StyledSelectInput
+                            label="Hoạ tiết"
+                            value={form.pattern}
+                            options={patterns}
                             onSelect={(v) => setField("pattern", v)}
                             editable={!isApproved}
                         />
-                        
+
                         <View className="flex-row gap-3">
                             <View className="flex-1">
                                 <FormField label="Giá nhập">
@@ -283,9 +331,13 @@ export default function SaleOrderDetail() {
 
                         {/* Size type switch */}
                         <View className="flex-row items-center justify-between py-1">
-                            <Text className={`text-sm ${isApproved ? "text-gray-400" : "text-gray-700"}`}>Kích cỡ - Số lượng</Text>
+                            <Text className={`text-sm ${isApproved ? "text-gray-400" : "text-gray-700"}`}>
+                                Kích cỡ - Số lượng
+                            </Text>
                             <View className="flex-row items-center gap-2">
-                                <Text className={`text-sm ${isApproved ? "text-gray-400" : "text-gray-500"}`}>Size số</Text>
+                                <Text className={`text-sm ${isApproved ? "text-gray-400" : "text-gray-500"}`}>
+                                    Size số
+                                </Text>
                                 <Switch
                                     value={form.isNumberSize}
                                     onValueChange={(v) => setField("isNumberSize", v)}
@@ -295,7 +347,7 @@ export default function SaleOrderDetail() {
                                 />
                             </View>
                         </View>
-            
+
                         {/* Size grid */}
                         <FlatList
                             data={sizes}
@@ -358,12 +410,12 @@ export default function SaleOrderDetail() {
                         </View>
                     )}
 
-                    {/* Action row — Save (outline) + Approve (filled, last product only) */}
-                    <View className="flex-row gap-3">
+                    {/* Save product button — full width now that delete is inline */}
+                    {!isApproved && (
                         <TouchableOpacity
                             disabled={isApproved || isUnchanged || updateProductMutation.isPending}
                             onPress={handleUpdateProduct}
-                            className={`flex-1 py-3 rounded-xl items-center border
+                            className={`py-3 rounded-xl items-center border
                                 ${isApproved || isUnchanged ? "border-gray-200 opacity-40" : "border-purple"}`}
                         >
                             {updateProductMutation.isPending ? (
@@ -375,13 +427,36 @@ export default function SaleOrderDetail() {
                                 </Text>
                             )}
                         </TouchableOpacity>
+                    )}
 
-                        {!hasNext && !isApproved && (
-                            <TouchableOpacity className="flex-1 bg-pink py-3 rounded-xl items-center">
-                                <Text className="text-white font-semibold text-sm">Duyệt đơn nhập</Text>
+                    {/* Approve / Decline row — only on the last product, not yet approved */}
+                    {!hasNext && !isApproved && (
+                        <View className="flex-row gap-3">
+                            <TouchableOpacity
+                                disabled={deleteOrderMutation.isPending}
+                                onPress={handleDeclineOrder}
+                                className="flex-1 py-3 rounded-xl items-center border border-red"
+                            >
+                                {deleteOrderMutation.isPending ? (
+                                    <ActivityIndicator size="small" color="#f87171" />
+                                ) : (
+                                    <Text className="text-red font-semibold text-sm">Từ chối đơn</Text>
+                                )}
                             </TouchableOpacity>
-                        )}
-                    </View>
+
+                            <TouchableOpacity
+                                disabled={approveMutation.isPending}
+                                onPress={handleApproveOrder}
+                                className="flex-1 bg-pink py-3 rounded-xl items-center"
+                            >
+                                {approveMutation.isPending ? (
+                                    <ActivityIndicator size="small" color="#fff" />
+                                ) : (
+                                    <Text className="text-white font-semibold text-sm">Duyệt đơn nhập</Text>
+                                )}
+                            </TouchableOpacity>
+                        </View>
+                    )}
 
                 </View>
             </SafeAreaView>

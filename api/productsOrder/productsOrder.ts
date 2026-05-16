@@ -54,3 +54,18 @@ export async function GetProductsOrderById(orderId: string) {
     
     return response.data;
 }
+
+export const ApproveProductsOrder = async (orderId: string) => {
+    const response = await axiosClient.patch(
+        `/products-orders/approve/${orderId}`,
+        {},
+    );
+    return response.data;
+};
+
+export const DeleteProductsOrder = async (orderId: string) => {
+    const response = await axiosClient.delete(
+        `/products-orders/${orderId}`,
+    );
+    return response.data;
+};
