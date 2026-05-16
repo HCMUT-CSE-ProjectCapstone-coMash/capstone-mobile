@@ -4,7 +4,6 @@ import { FormField } from "@/components/FormInputs/FormField";
 import { StyledSelectInput } from "@/components/FormInputs/StyledSelectInput";
 import { StyledTextInput } from "@/components/FormInputs/StyledTextInput";
 import { categories, colors, patterns, sizesLetter, sizesNumber } from "@/constants/products";
-import { DEFAULT_STATUS, STATUS_MAP } from "@/constants/productsOrderUI";
 import { addAlert } from "@/stores/alertStore";
 import { Product, UpdateProduct } from "@/types/Product";
 import { formatThousands, parseFormattedNumber } from "@/utilities/numberFormat";
@@ -114,7 +113,7 @@ export default function SaleOrderDetail() {
     const approveMutation = useMutation({
         mutationFn: (orderId: string) => ApproveProductsOrder(orderId),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["products-orders-excluding-pending"] });
+            queryClient.invalidateQueries({ queryKey: ["products-orders-excluding-pending", ""] });
             dispatch(addAlert({ type: "success", message: "Duyệt đơn hàng thành công" }));
             router.back();
         },
@@ -126,6 +125,7 @@ export default function SaleOrderDetail() {
     const deleteOrderMutation = useMutation({
         mutationFn: (orderId: string) => DeleteProductsOrder(orderId),
         onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["products-orders-excluding-pending", ""] });
             dispatch(addAlert({ type: "success", message: "Từ chối đơn thành công" }));
             router.back();
         },
@@ -156,8 +156,7 @@ export default function SaleOrderDetail() {
             </View>
         );
     }
-
-    const status = STATUS_MAP[data.orderStatus as keyof typeof STATUS_MAP] ?? DEFAULT_STATUS;
+    
     const isApproved = data.orderStatus === "Approved";
     const isRestock = (product?.quantityChanges ?? []).length > 0;
     const hasPrev = currentIndex > 0;
@@ -227,17 +226,14 @@ export default function SaleOrderDetail() {
                             <Text className="text-sm font-medium text-gray-700">Sản phẩm</Text>
                             {!isApproved && (
                                 <TouchableOpacity
-                                    disabled={isApproved || deleteMutation.isPending}
-                                    onPress={handleDeleteProduct}
-                                    className={`px-5 py-3 rounded-lg border
-                                        ${isApproved ? "border-gray-200 opacity-40" : "border-red"}`}
+                                    disabled={deleteMutation.isPending || deleteOrderMutation.isPending}
+                                    onPress={products.length === 1 ? handleDeclineOrder : handleDeleteProduct}
+                                    className="px-5 py-3 rounded-lg border border-red"
                                 >
-                                    {deleteMutation.isPending ? (
+                                    {deleteMutation.isPending || deleteOrderMutation.isPending ? (
                                         <ActivityIndicator size="small" color="#f87171" />
                                     ) : (
-                                        <Text className={`text-xs font-medium ${isApproved ? "text-gray-400" : "text-red"}`}>
-                                            Xoá sản phẩm
-                                        </Text>
+                                        <Text className="text-xs font-medium text-red">Xoá sản phẩm</Text>
                                     )}
                                 </TouchableOpacity>
                             )}
