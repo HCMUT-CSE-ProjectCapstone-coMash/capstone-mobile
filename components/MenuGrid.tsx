@@ -15,6 +15,7 @@ export function MenuGrid({ items }: MenuGridProps) {
             data={items}
             keyExtractor={(item) => item.route}
             numColumns={4}
+            scrollEnabled={false}
             renderItem={({ item }) => (
                 <TouchableOpacity
                     onPress={() => router.push(item.route as any)}
