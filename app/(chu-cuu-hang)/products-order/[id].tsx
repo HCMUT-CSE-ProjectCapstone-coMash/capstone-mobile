@@ -13,8 +13,9 @@ import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Image, ScrollView, Switch, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Image, Switch, Text, TouchableOpacity, View } from "react-native";
 import { FlatList, TextInput } from "react-native-gesture-handler";
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useDispatch } from "react-redux";
 
@@ -163,7 +164,12 @@ export default function SaleOrderDetail() {
                 <Text className="text-xl font-semibold">Chi tiết đơn nhập</Text>
             </View>
 
-            <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 32, gap: 16 }}>
+            <KeyboardAwareScrollView
+                contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 24, gap: 16 }}
+                enableOnAndroid
+                extraScrollHeight={16}
+                keyboardShouldPersistTaps="handled"
+            >
                 {/* Order info */}
                 <View className="flex-row items-start justify-between gap-2">
                     <Text className="font-semibold text-gray-900 flex-1">{data.orderName}</Text>
@@ -317,7 +323,7 @@ export default function SaleOrderDetail() {
                         />
                     </View>
                 )}
-            </ScrollView>
+            </KeyboardAwareScrollView>
 
             {/* ─── Sticky bottom bar ─────────────────────────────────── */}
             <SafeAreaView edges={["bottom"]} className="bg-white border-t border-gray-100">
