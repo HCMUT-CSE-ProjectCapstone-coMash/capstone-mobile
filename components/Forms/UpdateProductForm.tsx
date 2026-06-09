@@ -1,10 +1,10 @@
-import { OwnerUpdateProduct } from "@/api/products/products";
-import { categories, colors, patterns, sizesLetter, sizesNumber } from "@/constants/products";
+import { FetchAllCategories, FetchAllColors, FetchAllPatterns, OwnerUpdateProduct } from "@/api/products/products";
+import { sizesLetter, sizesNumber } from "@/constants/products";
 import { addAlert } from "@/stores/alertStore";
 import { clearEditingProduct } from "@/stores/productEditStore";
-import { Product, UpdateProduct } from "@/types/Product";
+import { Category, Color, Pattern, Product, UpdateProduct } from "@/types/Product";
 import { formatThousands, parseFormattedNumber } from "@/utilities/numberFormat";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueries } from "@tanstack/react-query";
 import { useState } from "react";
 import { Image, Switch, Text, TouchableOpacity, View } from "react-native";
 import { FlatList, TextInput } from "react-native-gesture-handler";
@@ -13,12 +13,52 @@ import { FormField } from "../FormInputs/FormField";
 import { StyledSelectInput } from "../FormInputs/StyledSelectInput";
 import { StyledTextInput } from "../FormInputs/StyledTextInput";
 
+interface UpdateProductFormProps {
+    editProduct: Product;
+}
+
+export function UpdateProductForm({ editProduct } : UpdateProductFormProps) {
+    const [categoriesQuery, colorsQuery, patternsQuery] = useQueries({
+        queries: [
+            { queryKey: ["categories"], queryFn: () => FetchAllCategories(), refetchOnWindowFocus: false },
+            { queryKey: ["colors"], queryFn: () => FetchAllColors(), refetchOnWindowFocus: false },
+            { queryKey: ["patterns"], queryFn: () => FetchAllPatterns(), refetchOnWindowFocus: false },
+        ],
+    });
+
+    const allLoaded = [categoriesQuery, colorsQuery, patternsQuery].every(q => q.isSuccess);
+
+    if (!allLoaded) {
+        return (
+            <View className="flex-1 items-center justify-center">
+                <Text className="text-gray-500">Đang tải dữ liệu...</Text>
+            </View>
+        );
+    }
+
+    return (
+        <UpdateProductFormInner 
+            editProduct={editProduct} 
+            categories={categoriesQuery.data}
+            colors={colorsQuery.data}
+            patterns={patternsQuery.data}
+        />
+    )
+}
+
+interface UpdateProductFormInnerProps {
+    editProduct: Product;
+    categories: Category[];
+    colors: Color[];
+    patterns: Pattern[];
+};
+
 interface FormState {
     productId: string;
     productName: string;
-    category: string;
-    color: string;
-    pattern: string;
+    categoryId: string;
+    colorId: string;
+    patternId: string;
     isNumberSize: boolean;
     letterQuantities: Record<string, number>;
     numberQuantities: Record<string, number>;
@@ -28,14 +68,9 @@ interface FormState {
     salePrice: number;
 }
 
-interface UpdateProductFormProps {
-    editProduct: Product;
-}
-
 const createInitialQuantities = (sizes: string[]) => Object.fromEntries(sizes.map((size) => [size, 0]));
 
-// Chuyển dữ liệu sản phẩm từ API về dạng state của form, bao gồm mapping số lượng theo size và tạo URL preview ảnh
-const mapProductToForm = (product: Product): FormState => {
+const mapProductToForm = (product: Product, categories: Category[] = [], colors: Color[] = [], patterns: Pattern[] = []): FormState => {
     const isNumber = product.sizeType === "Number";
     const sizes = isNumber ? sizesNumber : sizesLetter;
 
@@ -50,33 +85,41 @@ const mapProductToForm = (product: Product): FormState => {
         });
     }
 
+    const categoryId = categories.find(c => c.categoryName === product.category)?.id ?? "";
+    const colorId = colors.find(c => c.colorName === product.color)?.id ?? "";
+    const patternId = patterns.find(p => p.patternName === product.pattern)?.id ?? "";
+
     return {
         productId: product.productId,
         productName: product.productName,
-        category: product.category,
-        color: product.color,
-        pattern: product.pattern,
+        categoryId,
+        colorId,
+        patternId,
         isNumberSize: isNumber,
         letterQuantities: isNumber ? createInitialQuantities(sizesLetter) : quantityMap,
         numberQuantities: isNumber ? quantityMap : createInitialQuantities(sizesNumber),
         imagePreviewUrl: product.imageURL ?? null,
         status: product.status,
+        salePrice: product.salePrice,
         importPrice: product.importPrice,
-        salePrice: product.salePrice
     };
 };
 
-export function UpdateProductForm({ editProduct }: UpdateProductFormProps) {
+export function UpdateProductFormInner({ editProduct, categories, colors, patterns } : UpdateProductFormInnerProps) {
     const dispatch = useDispatch();
 
-    const [form, setForm] = useState<FormState>(() => mapProductToForm(editProduct));
+    const categoryOptions = categories.map((c: Category) => ({ label: c.categoryName, value: c.id }));
+    const colorOptions = colors.map((c: Color) => ({ label: c.colorName, value: c.id }));
+    const patternOptions = patterns.map((p: Pattern) => ({ label: p.patternName, value: p.id }));
+
+    const [form, setForm] = useState<FormState>(() => mapProductToForm(editProduct, categories, colors, patterns));
+
     const setField = <K extends keyof FormState>(key: K, value: FormState[K]) => {
         setForm((prev) => ({ ...prev, [key]: value }));
     };
 
-    const isUnchanged = JSON.stringify(form) === JSON.stringify(mapProductToForm(editProduct));
+    const isUnchanged = JSON.stringify(form) === JSON.stringify(mapProductToForm(editProduct, categories, colors, patterns));
 
-    // Tuỳ theo loại size đang chọn, hiển thị input số lượng tương ứng (UI)
     const sizes = form.isNumberSize ? sizesNumber : sizesLetter;
     const quantities = form.isNumberSize ? form.numberQuantities : form.letterQuantities;
 
@@ -100,12 +143,12 @@ export function UpdateProductForm({ editProduct }: UpdateProductFormProps) {
             return;
         }
 
-        if(!form.category) {
+        if(!form.categoryId) {
             dispatch(addAlert({ type: "warning", message: "Vui chọn phân loại" }));
             return;
         }
 
-        if(!form.color) {
+        if(!form.colorId) {
             dispatch(addAlert({ type: "warning", message: "Vui lòng chọn màu" }));
             return;
         }
@@ -134,9 +177,9 @@ export function UpdateProductForm({ editProduct }: UpdateProductFormProps) {
         const updateData: UpdateProduct = {
             productId: form.productId,
             productName: form.productName,
-            category: form.category,
-            color: form.color,
-            pattern: form.pattern,
+            categoryId: form.categoryId,
+            colorId: form.colorId,
+            patternId: form.patternId,
             sizeType: form.isNumberSize ? "Number" : "Letter",
             quantities: formattedQuantities,
             importPrice: form.importPrice,
@@ -145,6 +188,7 @@ export function UpdateProductForm({ editProduct }: UpdateProductFormProps) {
 
         updateMutation.mutate({ updateData, productId: editProduct.id });
     }
+
 
     return (
         <View className="gap-4">
@@ -179,24 +223,24 @@ export function UpdateProductForm({ editProduct }: UpdateProductFormProps) {
             {/* Selects */}
             <StyledSelectInput
                 label="Phân loại" 
-                value={form.category} 
-                options={categories} 
-                onSelect={(v) => setField("category", v)} 
+                value={form.categoryId} 
+                options={categoryOptions} 
+                onSelect={(v) => setField("categoryId", v)} 
                 editable={false}
             />
 
             <StyledSelectInput 
                 label="Màu sắc" 
-                value={form.color} 
-                options={colors} 
-                onSelect={(v) => setField("color", v)}
+                value={form.colorId} 
+                options={colorOptions} 
+                onSelect={(v) => setField("colorId", v)}
             />
 
             <StyledSelectInput 
                 label="Hoạ tiết" 
-                value={form.pattern} 
-                options={patterns} 
-                onSelect={(v) => setField("pattern", v)} 
+                value={form.patternId} 
+                options={patternOptions} 
+                onSelect={(v) => setField("patternId", v)} 
             />
             
             <View className="flex-row gap-3">

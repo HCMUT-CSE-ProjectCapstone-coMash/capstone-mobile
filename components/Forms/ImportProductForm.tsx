@@ -1,16 +1,16 @@
-import { AnalyzeImage, CreateProductIdByCategory, EmployeeCreateProduct, FetchApprovedProductByName, OwnerCreateProduct, SearchSimilarProduct } from "@/api/products/products";
+import { AnalyzeImage, CreateProductIdByCategory, EmployeeCreateProduct, FetchAllCategories, FetchAllColors, FetchAllPatterns, FetchApprovedProductByName, OwnerCreateProduct, SearchSimilarProduct } from "@/api/products/products";
 import { FormField } from "@/components/FormInputs/FormField";
 import { StyledSelectInput } from "@/components/FormInputs/StyledSelectInput";
 import { StyledTextInput } from "@/components/FormInputs/StyledTextInput";
-import { categories, colors, patterns, sizesLetter, sizesNumber } from "@/constants/products";
+import { sizesLetter, sizesNumber } from "@/constants/products";
 import { useDebounce } from "@/hooks/useDebounce";
 import { addAlert } from "@/stores/alertStore";
 import { setEditingProduct } from "@/stores/productEditStore";
 import { RootState } from "@/stores/store";
-import { CreateProduct, ProductWithOrderStatus, RNFile } from "@/types/Product";
+import { Category, Color, CreateProduct, Pattern, ProductWithOrderStatus, RNFile } from "@/types/Product";
 import { formatThousands, parseFormattedNumber } from "@/utilities/numberFormat";
 import { Ionicons } from "@expo/vector-icons";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQueries, useQuery } from "@tanstack/react-query";
 import * as ImageManipulator from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
@@ -23,9 +23,9 @@ import { SuggestionModal } from "../Modals/SuggestionModal";
 interface FormState {
     productId: string;
     productName: string;
-    category: string;
-    color: string;
-    pattern: string;
+    categoryId: string;
+    colorId: string;
+    patternId: string;
     importPrice: number;
     salePrice: number;
     isNumberSize: boolean;
@@ -40,9 +40,9 @@ const createInitialQuantities = (sizes: string[]) => Object.fromEntries(sizes.ma
 const initialFormState: FormState = {
     productId: "",
     productName: "",
-    category: "",
-    color: "",
-    pattern: "",
+    categoryId: "",
+    colorId: "",
+    patternId: "",
     isNumberSize: false,
     letterQuantities: createInitialQuantities(sizesLetter),
     numberQuantities: createInitialQuantities(sizesNumber),
@@ -69,6 +69,41 @@ export function ImportProductForm() {
         const key = form.isNumberSize ? "numberQuantities" : "letterQuantities";
         setForm((prev) => ({ ...prev, [key]: { ...prev[key], [size]: value } }));
     };
+
+    const [categoriesQuery, colorsQuery, patternsQuery] = useQueries({
+        queries: [
+            {
+                queryKey: ["categories"],
+                queryFn: () => FetchAllCategories(),
+                refetchOnWindowFocus: false,
+            },
+            {
+                queryKey: ["colors"],
+                queryFn: () => FetchAllColors(),
+                refetchOnWindowFocus: false,
+            },
+            {
+                queryKey: ["patterns"],
+                queryFn: () => FetchAllPatterns(),
+                refetchOnWindowFocus: false,
+            }
+        ] 
+    });
+    
+    const categoryOptions = (categoriesQuery.data ?? []).map((c: Category) => ({
+        label: c.categoryName,
+        value: c.id,
+    }));
+    
+    const colorOptions = (colorsQuery.data ?? []).map((c: Color) => ({
+        label: c.colorName,
+        value: c.id,
+    }));
+    
+    const patternOptions = (patternsQuery.data ?? []).map((p: Pattern) => ({
+        label: p.patternName,
+        value: p.id,
+    }));
 
     // ── Image picker ──────────────────────────────────────────────
     const [showCamera, setShowCamera] = useState(false);
@@ -128,10 +163,17 @@ export function ImportProductForm() {
         mutationFn: (imageFile: RNFile) => AnalyzeImage(imageFile),
         onSuccess: (data) => {
             setField("productName", data.productName);
-            setField("category", data.category);
-            setField("color", data.color);
-            setField("pattern", data.pattern);
-            createProductIdMutation.mutate(data.category);
+
+            const matchedCategory = categoriesQuery.data?.find((c: Category) => c.categoryName === data.category);
+            const matchedColor = colorsQuery.data?.find((c: Color) => c.colorName === data.color);
+            const matchedPattern = patternsQuery.data?.find((p: Pattern) => p.patternName === data.pattern);
+        
+            if (matchedCategory) {
+                setField("categoryId", matchedCategory.id);
+                createProductIdMutation.mutate(matchedCategory.id);
+            }
+            if (matchedColor) setField("colorId", matchedColor.id);
+            if (matchedPattern) setField("patternId", matchedPattern.id);
         },
         onError: () => {}
     });
@@ -185,15 +227,19 @@ export function ImportProductForm() {
 
         if (!form.imageFile)    
             return dispatch(addAlert({ type: "warning", message: "Vui lòng chọn hình ảnh sản phẩm." }));
+
         if (!form.productName)  
             return dispatch(addAlert({ type: "warning", message: "Vui lòng nhập tên sản phẩm." }));
-        if (!form.category)     
+
+        if (!form.categoryId)     
             return dispatch(addAlert({ type: "warning", message: "Vui lòng chọn phân loại sản phẩm." }));
-        if (!form.color)        
+
+        if (!form.colorId)        
             return dispatch(addAlert({ type: "warning", message: "Vui lòng chọn màu sắc sản phẩm." }));
 
         if (user.role === "owner" && form.importPrice <= 0)
             return dispatch(addAlert({ type: "warning", message: "Vui lòng nhập giá nhập." }));
+
         if (user.role === "owner" && form.salePrice <= 0)
             return dispatch(addAlert({ type: "warning", message: "Vui lòng nhập giá bán." }));
 
@@ -207,9 +253,9 @@ export function ImportProductForm() {
 
         const payload: CreateProduct = {
             productName: form.productName,
-            category: form.category,
-            color: form.color,
-            pattern: form.pattern,
+            categoryId: form.categoryId,
+            colorId: form.colorId,
+            patternId: form.patternId,
             sizeType: form.isNumberSize ? "Number" : "Letter",
             quantities: formattedQuantities,
             createdBy: user.id,
@@ -247,12 +293,19 @@ export function ImportProductForm() {
                 visible={showSuggestionModal}
                 onClose={() => setShowSuggestionModal(false)}
                 products={similarProducts}
-                onAnalyzeResult={(product) => {
-                    setField("productName", product.productName);
-                    setField("category", product.category);
-                    setField("color", product.color);
-                    setField("pattern", product.pattern);
-                    createProductIdMutation.mutate(product.category);
+                onAnalyzeResult={(data) => {
+                    setField("productName", data.productName);
+
+                    const matchedCategory = categoriesQuery.data?.find((c: Category) => c.categoryName === data.category);
+                    const matchedColor = colorsQuery.data?.find((c: Color) => c.colorName === data.color);
+                    const matchedPattern = patternsQuery.data?.find((p: Pattern) => p.patternName === data.pattern);
+                
+                    if (matchedCategory) {
+                        setField("categoryId", matchedCategory.id);
+                        createProductIdMutation.mutate(matchedCategory.id);
+                    }
+                    if (matchedColor) setField("colorId", matchedColor.id);
+                    if (matchedPattern) setField("patternId", matchedPattern.id);
                 }}
                 imageFile={form.imageFile!}
                 productsOrdersId={productsOrder?.id || ""}
@@ -366,10 +419,21 @@ export function ImportProductForm() {
                 </FormField>
 
                 {/* Selects */}
-                <StyledSelectInput label="Phân loại" value={form.category} options={categories}
-                    onSelect={(v) => { setField("category", v); createProductIdMutation.mutate(v); }} />
-                <StyledSelectInput label="Màu sắc"  value={form.color}    options={colors}    onSelect={(v) => setField("color", v)} />
-                <StyledSelectInput label="Hoạ tiết" value={form.pattern}  options={patterns}  onSelect={(v) => setField("pattern", v)} />
+                <StyledSelectInput 
+                    label="Phân loại" 
+                    value={form.categoryId} 
+                    options={categoryOptions} 
+                    onSelect={(v) => { 
+                        setField("categoryId", v);
+                        if (v) {
+                            createProductIdMutation.mutate(v);
+                        } else {
+                            setField("productId", "");
+                        }
+                    }} 
+                />
+                <StyledSelectInput label="Màu sắc" value={form.colorId} options={colorOptions} onSelect={(v) => setField("colorId", v)} />
+                <StyledSelectInput label="Hoạ tiết" value={form.patternId} options={patternOptions} onSelect={(v) => setField("patternId", v)} />
 
                 {/* Prices (owner only) */}
                 {user.role === "owner" && (

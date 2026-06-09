@@ -1,25 +1,66 @@
-import { EmployeeUpdateProductInProductsOrder, OwnerUpdateProductInProductsOrder } from "@/api/products/products";
-import { categories, colors, patterns, sizesLetter, sizesNumber } from "@/constants/products";
+import { EmployeeUpdateProductInProductsOrder, FetchAllCategories, FetchAllColors, FetchAllPatterns, OwnerUpdateProductInProductsOrder } from "@/api/products/products";
+import { sizesLetter, sizesNumber } from "@/constants/products";
 import { addAlert } from "@/stores/alertStore";
 import { clearEditingProduct } from "@/stores/productEditStore";
 import { RootState } from "@/stores/store";
-import { Product, UpdateProduct } from "@/types/Product";
+import { Category, Color, Pattern, Product, UpdateProduct } from "@/types/Product";
 import { formatThousands, parseFormattedNumber } from "@/utilities/numberFormat";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueries } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
-import { useMemo, useState } from "react";
-import { ActivityIndicator, FlatList, Image, Switch, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { useState } from "react";
+import { ActivityIndicator, Image, Switch, Text, TouchableOpacity, View } from "react-native";
+import { FlatList, TextInput } from "react-native-gesture-handler";
 import { useDispatch, useSelector } from "react-redux";
 import { FormField } from "../FormInputs/FormField";
 import { StyledSelectInput } from "../FormInputs/StyledSelectInput";
 import { StyledTextInput } from "../FormInputs/StyledTextInput";
 
+interface UpdateProductInProductsOrderFormProps {
+    editProduct: Product;
+}
+
+export function UpdateProductInProductsOrderForm({ editProduct }: UpdateProductInProductsOrderFormProps) {
+    const [categoriesQuery, colorsQuery, patternsQuery] = useQueries({
+        queries: [
+            { queryKey: ["categories"], queryFn: () => FetchAllCategories(), refetchOnWindowFocus: false },
+            { queryKey: ["colors"], queryFn: () => FetchAllColors(), refetchOnWindowFocus: false },
+            { queryKey: ["patterns"], queryFn: () => FetchAllPatterns(), refetchOnWindowFocus: false },
+        ],
+    });
+
+    const allLoaded = [categoriesQuery, colorsQuery, patternsQuery].every(q => q.isSuccess);
+
+    if (!allLoaded) {
+        return (
+            <View className="flex-1 items-center justify-center">
+                <Text className="text-gray-500">Đang tải dữ liệu...</Text>
+            </View>
+        );
+    }
+
+    return (
+        <UpdateProductInProductsOrderFormInner
+            editProduct={editProduct}
+            categories={categoriesQuery.data}
+            colors={colorsQuery.data}
+            patterns={patternsQuery.data}
+        />
+    );
+}
+
+interface UpdateProductInProductsOrderFormInnerProps {
+    editProduct: Product;
+    categories: Category[];
+    colors: Color[];
+    patterns: Pattern[];
+}
+
 interface FormState {
     productId: string;
     productName: string;
-    category: string;
-    color: string;
-    pattern: string;
+    categoryId: string;
+    colorId: string;
+    patternId: string;
     isNumberSize: boolean;
     letterQuantities: Record<string, number>;
     numberQuantities: Record<string, number>;
@@ -29,14 +70,9 @@ interface FormState {
     salePrice: number;
 }
 
-interface UpdateProductFormProps {
-    editProduct: Product;
-}
-
 const createInitialQuantities = (sizes: string[]) => Object.fromEntries(sizes.map((size) => [size, 0]));
 
-// Chuyển dữ liệu sản phẩm từ API về dạng state của form, bao gồm mapping số lượng theo size và tạo URL preview ảnh
-const mapProductToForm = (product: Product): FormState => {
+const mapProductToForm = (product: Product, categories: Category[] = [], colors: Color[] = [], patterns: Pattern[] = []): FormState => {
     const isNumber = product.sizeType === "Number";
     const sizes = isNumber ? sizesNumber : sizesLetter;
 
@@ -51,12 +87,16 @@ const mapProductToForm = (product: Product): FormState => {
         });
     }
 
+    const categoryId = categories.find(c => c.categoryName === product.category)?.id ?? "";
+    const colorId = colors.find(c => c.colorName === product.color)?.id ?? "";
+    const patternId = patterns.find(p => p.patternName === product.pattern)?.id ?? "";
+
     return {
         productId: product.productId,
         productName: product.productName,
-        category: product.category,
-        color: product.color,
-        pattern: product.pattern,
+        categoryId,
+        colorId,
+        patternId,
         isNumberSize: isNumber,
         letterQuantities: isNumber ? createInitialQuantities(sizesLetter) : quantityMap,
         numberQuantities: isNumber ? quantityMap : createInitialQuantities(sizesNumber),
@@ -75,26 +115,27 @@ const getMinQuantities = (product: Product, sizes: string[]): Record<string, num
     return map;
 };
 
-export function UpdateProductInProductsOrderForm({ editProduct }: UpdateProductFormProps) {
+export function UpdateProductInProductsOrderFormInner({ editProduct, categories, colors, patterns }: UpdateProductInProductsOrderFormInnerProps) {
     const router = useRouter();
     const dispatch = useDispatch();
     const user = useSelector((state: RootState) => state.user);
     const productsOrder = useSelector((state: RootState) => state.productsOrder.productsOrder);
 
-    const [form, setForm] = useState<FormState>(() => mapProductToForm(editProduct));
+    const categoryOptions = categories.map((c: Category) => ({ label: c.categoryName, value: c.id }));
+    const colorOptions = colors.map((c: Color) => ({ label: c.colorName, value: c.id }));
+    const patternOptions = patterns.map((p: Pattern) => ({ label: p.patternName, value: p.id }));
+
+    const allSizes = [...sizesLetter, ...sizesNumber];
+    const minQuantities = getMinQuantities(editProduct, allSizes);
+
+    const [form, setForm] = useState<FormState>(() => mapProductToForm(editProduct, categories, colors, patterns));
+
     const setField = <K extends keyof FormState>(key: K, value: FormState[K]) => {
         setForm((prev) => ({ ...prev, [key]: value }));
     };
 
-    const isUnchanged = JSON.stringify(form) === JSON.stringify(mapProductToForm(editProduct));
+    const isUnchanged = JSON.stringify(form) === JSON.stringify(mapProductToForm(editProduct, categories, colors, patterns));
 
-    const allSizes = useMemo(() => [...sizesLetter, ...sizesNumber], []);
-    const minQuantities = useMemo(
-        () => getMinQuantities(editProduct, allSizes),
-        [editProduct, allSizes]
-    );
-
-    // Tuỳ theo loại size đang chọn, hiển thị input số lượng tương ứng (UI)
     const sizes = form.isNumberSize ? sizesNumber : sizesLetter;
     const quantities = form.isNumberSize ? form.numberQuantities : form.letterQuantities;
 
@@ -104,8 +145,9 @@ export function UpdateProductInProductsOrderForm({ editProduct }: UpdateProductF
     };
 
     const OwnerUpdateProductInProductsOrderMutation = useMutation({
-        mutationFn: ({ productId, productsOrderId, ownerUpdateData } : 
-            { productId: string, productsOrderId: string, ownerUpdateData : UpdateProduct }) => OwnerUpdateProductInProductsOrder(productId, productsOrderId, ownerUpdateData),
+        mutationFn: ({ productId, productsOrderId, ownerUpdateData }:
+            { productId: string, productsOrderId: string, ownerUpdateData: UpdateProduct }) =>
+            OwnerUpdateProductInProductsOrder(productId, productsOrderId, ownerUpdateData),
 
         onSuccess: () => {
             dispatch(addAlert({ type: "success", message: "Cập nhật sản phẩm thành công" }));
@@ -118,8 +160,9 @@ export function UpdateProductInProductsOrderForm({ editProduct }: UpdateProductF
     });
 
     const EmployeeUpdateProductInProductsOrderMutation = useMutation({
-        mutationFn: ({ productId, productsOrderId, employeeUpdateData } : 
-            { productId: string, productsOrderId: string, employeeUpdateData : UpdateProduct }) => EmployeeUpdateProductInProductsOrder(productId, productsOrderId, employeeUpdateData),
+        mutationFn: ({ productId, productsOrderId, employeeUpdateData }:
+            { productId: string, productsOrderId: string, employeeUpdateData: UpdateProduct }) =>
+            EmployeeUpdateProductInProductsOrder(productId, productsOrderId, employeeUpdateData),
 
         onSuccess: () => {
             dispatch(addAlert({ type: "success", message: "Cập nhật sản phẩm thành công" }));
@@ -134,17 +177,17 @@ export function UpdateProductInProductsOrderForm({ editProduct }: UpdateProductF
     const handleSubmit = () => {
         if (!productsOrder?.id) return;
 
-        if(!form.productName) {
-            dispatch(addAlert({ type: "warning", message: "Vui lòng nhập tên sản phẩm "}));
+        if (!form.productName) {
+            dispatch(addAlert({ type: "warning", message: "Vui lòng nhập tên sản phẩm" }));
             return;
         }
 
-        if(!form.category) {
-            dispatch(addAlert({ type: "warning", message: "Vui chọn phân loại" }));
+        if (!form.categoryId) {
+            dispatch(addAlert({ type: "warning", message: "Vui lòng chọn phân loại" }));
             return;
         }
 
-        if(!form.color) {
+        if (!form.colorId) {
             dispatch(addAlert({ type: "warning", message: "Vui lòng chọn màu" }));
             return;
         }
@@ -183,9 +226,9 @@ export function UpdateProductInProductsOrderForm({ editProduct }: UpdateProductF
         const updateData: UpdateProduct = {
             productId: form.productId,
             productName: form.productName,
-            category: form.category,
-            color: form.color,
-            pattern: form.pattern,
+            categoryId: form.categoryId,
+            colorId: form.colorId,
+            patternId: form.patternId,
             sizeType: form.isNumberSize ? "Number" : "Letter",
             quantities: formattedQuantities
         };
@@ -193,11 +236,19 @@ export function UpdateProductInProductsOrderForm({ editProduct }: UpdateProductF
         if (user.role === "owner") {
             updateData.importPrice = form.importPrice;
             updateData.salePrice = form.salePrice;
-            OwnerUpdateProductInProductsOrderMutation.mutate({ productId: editProduct.id, productsOrderId: productsOrder.id, ownerUpdateData: updateData });
+            OwnerUpdateProductInProductsOrderMutation.mutate({
+                productId: editProduct.id,
+                productsOrderId: productsOrder.id,
+                ownerUpdateData: updateData
+            });
         } else {
-            EmployeeUpdateProductInProductsOrderMutation.mutate({ productId: editProduct.id, productsOrderId: productsOrder.id, employeeUpdateData: updateData });
+            EmployeeUpdateProductInProductsOrderMutation.mutate({
+                productId: editProduct.id,
+                productsOrderId: productsOrder.id,
+                employeeUpdateData: updateData
+            });
         }
-    }
+    };
 
     const isPending = OwnerUpdateProductInProductsOrderMutation.isPending || EmployeeUpdateProductInProductsOrderMutation.isPending;
 
@@ -208,7 +259,7 @@ export function UpdateProductInProductsOrderForm({ editProduct }: UpdateProductF
                     <Text className="text-sm text-gray-500">Hình ảnh sản phẩm</Text>
 
                     {user.role === "employee" && (
-                        <TouchableOpacity 
+                        <TouchableOpacity
                             className="px-3 py-2 rounded-xl items-center border border-gray-500 bg-white"
                             onPress={() => router.push("/(nhan-vien)/approval-list")}
                         >
@@ -244,27 +295,27 @@ export function UpdateProductInProductsOrderForm({ editProduct }: UpdateProductF
             </FormField>
 
             {/* Selects */}
-            <StyledSelectInput 
-                label="Phân loại" 
-                value={form.category} 
-                options={categories} 
-                onSelect={(v) => setField("category", v)} 
+            <StyledSelectInput
+                label="Phân loại"
+                value={form.categoryId}
+                options={categoryOptions}
+                onSelect={(v) => setField("categoryId", v)}
                 editable={false}
             />
 
-            <StyledSelectInput 
-                label="Màu sắc" 
-                value={form.color} 
-                options={colors} 
-                onSelect={(v) => setField("color", v)} 
+            <StyledSelectInput
+                label="Màu sắc"
+                value={form.colorId}
+                options={colorOptions}
+                onSelect={(v) => setField("colorId", v)}
                 editable={form.status !== "Approved" && user.role === "employee"}
             />
 
-            <StyledSelectInput 
-                label="Hoạ tiết" 
-                value={form.pattern} 
-                options={patterns} 
-                onSelect={(v) => setField("pattern", v)} 
+            <StyledSelectInput
+                label="Hoạ tiết"
+                value={form.patternId}
+                options={patternOptions}
+                onSelect={(v) => setField("patternId", v)}
                 editable={form.status !== "Approved" && user.role === "employee"}
             />
 
@@ -373,5 +424,5 @@ export function UpdateProductInProductsOrderForm({ editProduct }: UpdateProductF
                 </TouchableOpacity>
             </View>
         </View>
-    )
+    );
 }

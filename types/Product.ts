@@ -35,9 +35,9 @@ export interface RNFile {
 
 export interface CreateProduct {
     productName: string,
-    category: string,
-    color: string,
-    pattern: string,
+    categoryId: string,
+    colorId: string,
+    patternId: string,
     sizeType: "Letter" | "Number",
     quantities: ProductQuantity[],
     createdBy: string,
@@ -49,9 +49,9 @@ export interface CreateProduct {
 export interface UpdateProduct {
     productId?: string,
     productName?: string,
-    category?: string,
-    color?: string,
-    pattern?: string,
+    categoryId?: string,
+    colorId?: string,
+    patternId?: string,
     sizeType?: "Letter" | "Number",
     quantities?: ProductQuantity[],
     image?: File | null,
@@ -77,3 +77,18 @@ export interface ProductWithOrderStatus {
     salePrice: number,
     isInPendingOrder: boolean
 };
+
+export type Category = {
+    id: string,
+    categoryName: string,
+};
+
+export type Color = {
+    id: string,
+    colorName: string,
+};
+
+export type Pattern = {
+    id: string,
+    patternName: string,
+}

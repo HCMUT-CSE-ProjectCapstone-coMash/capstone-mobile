@@ -1,14 +1,24 @@
-import { OwnerUpdateProductInProductsOrder } from "@/api/products/products";
-import { ApproveProductsOrder, DeleteProductFromProductsOrders, DeleteProductsOrder, GetProductsOrderById } from "@/api/productsOrder/productsOrder";
+import {
+    FetchAllCategories,
+    FetchAllColors,
+    FetchAllPatterns,
+    OwnerUpdateProductInProductsOrder
+} from "@/api/products/products";
+import {
+    ApproveProductsOrder,
+    DeleteProductFromProductsOrders,
+    DeleteProductsOrder,
+    GetProductsOrderById
+} from "@/api/productsOrder/productsOrder";
 import { FormField } from "@/components/FormInputs/FormField";
 import { StyledSelectInput } from "@/components/FormInputs/StyledSelectInput";
 import { StyledTextInput } from "@/components/FormInputs/StyledTextInput";
-import { categories, colors, patterns, sizesLetter, sizesNumber } from "@/constants/products";
+import { sizesLetter, sizesNumber } from "@/constants/products";
 import { addAlert } from "@/stores/alertStore";
-import { Product, UpdateProduct } from "@/types/Product";
+import { Category, Color, Pattern, Product, UpdateProduct } from "@/types/Product";
 import { formatThousands, parseFormattedNumber } from "@/utilities/numberFormat";
 import { Ionicons } from "@expo/vector-icons";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Image, Switch, Text, TouchableOpacity, View } from "react-native";
@@ -20,9 +30,9 @@ import { useDispatch } from "react-redux";
 interface FormState {
     productId: string;
     productName: string;
-    category: string;
-    color: string;
-    pattern: string;
+    categoryId: string;
+    colorId: string;
+    patternId: string;
     isNumberSize: boolean;
     letterQuantities: Record<string, number>;
     numberQuantities: Record<string, number>;
@@ -34,7 +44,7 @@ interface FormState {
 
 const createInitialQuantities = (sizes: string[]) => Object.fromEntries(sizes.map((size) => [size, 0]));
 
-const mapProductToForm = (product: Product): FormState => {
+const mapProductToForm = (product: Product, categories: Category[] = [], colors: Color[] = [], patterns: Pattern[] = []): FormState => {
     const isNumber = product.sizeType === "Number";
     const sizes = isNumber ? sizesNumber : sizesLetter;
 
@@ -49,12 +59,16 @@ const mapProductToForm = (product: Product): FormState => {
         });
     }
 
+    const categoryId = categories.find(c => c.categoryName === product.category)?.id ?? "";
+    const colorId = colors.find(c => c.colorName === product.color)?.id ?? "";
+    const patternId = patterns.find(p => p.patternName === product.pattern)?.id ?? "";
+
     return {
         productId: product.productId,
         productName: product.productName,
-        category: product.category,
-        color: product.color,
-        pattern: product.pattern,
+        categoryId,
+        colorId,
+        patternId,
         isNumberSize: isNumber,
         letterQuantities: isNumber ? createInitialQuantities(sizesLetter) : quantityMap,
         numberQuantities: isNumber ? quantityMap : createInitialQuantities(sizesNumber),
@@ -69,21 +83,66 @@ interface UpdateProductPayload {
     productId: string;
     productOrderId: string;
     updateData: UpdateProduct;
-};
+}
+
+interface SaleOrderDetailInnerProps {
+    id: string;
+    order: NonNullable<Awaited<ReturnType<typeof GetProductsOrderById>>>;
+    categories: Category[];
+    colors: Color[];
+    patterns: Pattern[];
+}
 
 export default function SaleOrderDetail() {
     const { id } = useLocalSearchParams<{ id: string }>();
     const router = useRouter();
-    const dispatch = useDispatch();
-    const queryClient = useQueryClient();
-    const [currentIndex, setCurrentIndex] = useState(0);
-    const [form, setForm] = useState<FormState | null>(null);
 
-    const { data, isLoading } = useQuery({
+    const [categoriesQuery, colorsQuery, patternsQuery] = useQueries({
+        queries: [
+            { queryKey: ["categories"], queryFn: () => FetchAllCategories(), refetchOnWindowFocus: false },
+            { queryKey: ["colors"], queryFn: () => FetchAllColors(), refetchOnWindowFocus: false },
+            { queryKey: ["patterns"], queryFn: () => FetchAllPatterns(), refetchOnWindowFocus: false },
+        ],
+    });
+
+    const orderQuery = useQuery({
         queryKey: ["saleOrderDetail", id],
         queryFn: () => GetProductsOrderById(id),
         enabled: !!id,
     });
+
+    const allLoaded = [categoriesQuery, colorsQuery, patternsQuery].every(q => q.isSuccess);
+
+    if (orderQuery.isLoading || !allLoaded || !orderQuery.data) {
+        return (
+            <View className="flex-1 items-center justify-center">
+                <Text className="text-gray-400">Đang tải...</Text>
+            </View>
+        );
+    }
+
+    return (
+        <SaleOrderDetailInner
+            id={id}
+            order={orderQuery.data}
+            categories={categoriesQuery.data}
+            colors={colorsQuery.data}
+            patterns={patternsQuery.data}
+            onBack={() => router.back()}
+        />
+    );
+}
+
+function SaleOrderDetailInner({ id, order, categories, colors, patterns, onBack }: SaleOrderDetailInnerProps & { onBack: () => void }) {
+    const dispatch = useDispatch();
+    const queryClient = useQueryClient();
+    const router = useRouter();
+    const [currentIndex, setCurrentIndex] = useState(0);
+    const [form, setForm] = useState<FormState | null>(null);
+
+    const categoryOptions = categories.map((c: Category) => ({ label: c.categoryName, value: c.id }));
+    const colorOptions = colors.map((c: Color) => ({ label: c.colorName, value: c.id }));
+    const patternOptions = patterns.map((p: Pattern) => ({ label: p.patternName, value: p.id }));
 
     const updateProductMutation = useMutation({
         mutationFn: ({ productId, productOrderId, updateData }: UpdateProductPayload) =>
@@ -134,31 +193,31 @@ export default function SaleOrderDetail() {
         }
     });
 
-    const products: Product[] = data?.products ?? [];
+    const products: Product[] = order.products ?? [];
     const product = products[currentIndex];
 
-    const isUnchanged = !!product && !!form && JSON.stringify(form) === JSON.stringify(mapProductToForm(product));
+    const isUnchanged = !!product && !!form && JSON.stringify(form) === JSON.stringify(mapProductToForm(product, categories, colors, patterns));
 
     useEffect(() => {
         if (product) {
-            setForm(mapProductToForm(product));
+            setForm(mapProductToForm(product, categories, colors, patterns));
         }
-    }, [currentIndex, product]);
+    }, [currentIndex, product, categories, colors, patterns]);
 
     const setField = <K extends keyof FormState>(key: K, value: FormState[K]) => {
         setForm((prev) => prev ? { ...prev, [key]: value } : prev);
     };
 
-    if (isLoading || !data || !form) {
+    if (!product || !form) {
         return (
             <View className="flex-1 items-center justify-center">
                 <Text className="text-gray-400">Đang tải...</Text>
             </View>
         );
     }
-    
-    const isApproved = data.orderStatus === "Approved";
-    const isRestock = (product?.quantityChanges ?? []).length > 0;
+
+    const isApproved = order.orderStatus === "Approved";
+    const isRestock = (product.quantityChanges ?? []).length > 0;
     const hasPrev = currentIndex > 0;
     const hasNext = currentIndex < products.length - 1;
 
@@ -172,9 +231,11 @@ export default function SaleOrderDetail() {
 
     const handleUpdateProduct = () => {
         const updateData: UpdateProduct = {
+            productId: form.productId,
             productName: form.productName,
-            color: form.color,
-            pattern: form.pattern,
+            categoryId: form.categoryId,
+            colorId: form.colorId,
+            patternId: form.patternId,
             sizeType: form.isNumberSize ? "Number" : "Letter",
             importPrice: form.importPrice,
             salePrice: form.salePrice,
@@ -205,7 +266,7 @@ export default function SaleOrderDetail() {
 
             {/* Header */}
             <View className="flex-row items-center gap-2 px-6 mt-4 mb-4">
-                <TouchableOpacity onPress={() => router.back()}>
+                <TouchableOpacity onPress={onBack}>
                     <Ionicons name="chevron-back" size={24} color="#111827" />
                 </TouchableOpacity>
                 <Text className="text-xl font-semibold">Chi tiết đơn nhập</Text>
@@ -218,159 +279,157 @@ export default function SaleOrderDetail() {
                 keyboardShouldPersistTaps="handled"
             >
                 {/* Product detail */}
-                {product && (
-                    <View className="gap-4">
+                <View className="gap-4">
 
-                        {/* "Sản phẩm" label + delete icon on the same row */}
-                        <View className="flex-row items-center justify-between">
-                            <Text className="text-sm font-medium text-gray-700">Sản phẩm</Text>
-                            {!isApproved && (
-                                <TouchableOpacity
-                                    disabled={deleteMutation.isPending || deleteOrderMutation.isPending}
-                                    onPress={products.length === 1 ? handleDeclineOrder : handleDeleteProduct}
-                                    className="px-5 py-3 rounded-lg border border-red"
-                                >
-                                    {deleteMutation.isPending || deleteOrderMutation.isPending ? (
-                                        <ActivityIndicator size="small" color="#f87171" />
-                                    ) : (
-                                        <Text className="text-xs font-medium text-red">Xoá sản phẩm</Text>
-                                    )}
-                                </TouchableOpacity>
-                            )}
-                        </View>
-
-                        <View className="relative">
-                            <Image
-                                source={{ uri: product.imageURL }}
-                                className="w-full aspect-square rounded-xl"
-                                resizeMode="cover"
-                            />
-                        </View>
-
-                        <View className="gap-1">
-                            <View className="flex-row items-center justify-between">
-                                <Text className="text-sm text-gray-500">Mã sản phẩm</Text>
-                                {isRestock ? (
-                                    <View className="self-start px-2.5 py-0.5 rounded-full bg-purple/10">
-                                        <Text className="text-xs font-medium text-purple">Hàng nhập thêm</Text>
-                                    </View>
+                    {/* "Sản phẩm" label + delete icon on the same row */}
+                    <View className="flex-row items-center justify-between">
+                        <Text className="text-sm font-medium text-gray-700">Sản phẩm</Text>
+                        {!isApproved && (
+                            <TouchableOpacity
+                                disabled={deleteMutation.isPending || deleteOrderMutation.isPending}
+                                onPress={products.length === 1 ? handleDeclineOrder : handleDeleteProduct}
+                                className="px-5 py-3 rounded-lg border border-red"
+                            >
+                                {deleteMutation.isPending || deleteOrderMutation.isPending ? (
+                                    <ActivityIndicator size="small" color="#f87171" />
                                 ) : (
-                                    <View className="self-start px-2.5 py-0.5 rounded-full bg-pink/10">
-                                        <Text className="text-xs font-medium text-pink">Hàng mới</Text>
-                                    </View>
+                                    <Text className="text-xs font-medium text-red">Xoá sản phẩm</Text>
                                 )}
-                            </View>
-                            <Text className="px-3 py-2 border border-gray-300 rounded-lg text-sm">
-                                {product.productId}
-                            </Text>
-                        </View>
+                            </TouchableOpacity>
+                        )}
+                    </View>
 
-                        {/* Product Name */}
-                        <FormField label="Tên sản phẩm">
-                            <StyledTextInput
-                                value={form.productName}
-                                onChangeText={(text) => setField("productName", text)}
-                                placeholder="Nhập tên sản phẩm"
-                                editable={!isApproved}
-                            />
-                        </FormField>
-
-                        {/* Selects */}
-                        <StyledSelectInput
-                            label="Phân loại"
-                            value={form.category}
-                            options={categories}
-                            onSelect={(v) => setField("category", v)}
-                            editable={false}
-                        />
-
-                        <StyledSelectInput
-                            label="Màu sắc"
-                            value={form.color}
-                            options={colors}
-                            onSelect={(v) => setField("color", v)}
-                            editable={!isApproved}
-                        />
-
-                        <StyledSelectInput
-                            label="Hoạ tiết"
-                            value={form.pattern}
-                            options={patterns}
-                            onSelect={(v) => setField("pattern", v)}
-                            editable={!isApproved}
-                        />
-
-                        <View className="flex-row gap-3">
-                            <View className="flex-1">
-                                <FormField label="Giá nhập">
-                                    <StyledTextInput
-                                        value={formatThousands(form.importPrice)}
-                                        onChangeText={(v) => setField("importPrice", parseFormattedNumber(v))}
-                                        placeholder="0 ₫"
-                                        keyboardType="numeric"
-                                        editable={!isApproved}
-                                    />
-                                </FormField>
-                            </View>
-                            <View className="flex-1">
-                                <FormField label="Giá bán">
-                                    <StyledTextInput
-                                        value={formatThousands(form.salePrice)}
-                                        onChangeText={(v) => setField("salePrice", parseFormattedNumber(v))}
-                                        placeholder="0 ₫"
-                                        keyboardType="numeric"
-                                        editable={!isApproved}
-                                    />
-                                </FormField>
-                            </View>
-                        </View>
-
-                        {/* Size type switch */}
-                        <View className="flex-row items-center justify-between py-1">
-                            <Text className={`text-sm ${isApproved ? "text-gray-400" : "text-gray-700"}`}>
-                                Kích cỡ - Số lượng
-                            </Text>
-                            <View className="flex-row items-center gap-2">
-                                <Text className={`text-sm ${isApproved ? "text-gray-400" : "text-gray-500"}`}>
-                                    Size số
-                                </Text>
-                                <Switch
-                                    value={form.isNumberSize}
-                                    onValueChange={(v) => setField("isNumberSize", v)}
-                                    trackColor={{ false: "#e5e7eb", true: "#f9a8d4" }}
-                                    thumbColor={form.isNumberSize ? "#ec4899" : "#fff"}
-                                    disabled={isApproved || isRestock}
-                                />
-                            </View>
-                        </View>
-
-                        {/* Size grid */}
-                        <FlatList
-                            data={sizes}
-                            keyExtractor={(item) => item}
-                            numColumns={2}
-                            scrollEnabled={false}
-                            columnWrapperClassName="gap-3"
-                            contentContainerClassName="gap-3"
-                            renderItem={({ item: size }) => (
-                                <View className="flex-1 flex-row items-center border border-gray-200 rounded-lg overflow-hidden">
-                                    <View className="bg-gray-50 py-2.5 border-r border-gray-200">
-                                        <Text className="text-sm text-gray-600 w-20 text-center">{size}</Text>
-                                    </View>
-                                    <TextInput
-                                        className="flex-1 px-3 py-2.5 text-sm text-center"
-                                        value={quantities[size] === 0 ? "" : String(quantities[size])}
-                                        onChangeText={(v) => handleQuantityChange(size, parseFormattedNumber(v))}
-                                        keyboardType="number-pad"
-                                        placeholder="0"
-                                        placeholderTextColor="#9ca3af"
-                                        editable={!isApproved}
-                                    />
-                                </View>
-                            )}
+                    <View className="relative">
+                        <Image
+                            source={{ uri: product.imageURL }}
+                            className="w-full aspect-square rounded-xl"
+                            resizeMode="cover"
                         />
                     </View>
-                )}
+
+                    <View className="gap-1">
+                        <View className="flex-row items-center justify-between">
+                            <Text className="text-sm text-gray-500">Mã sản phẩm</Text>
+                            {isRestock ? (
+                                <View className="self-start px-2.5 py-0.5 rounded-full bg-purple/10">
+                                    <Text className="text-xs font-medium text-purple">Hàng nhập thêm</Text>
+                                </View>
+                            ) : (
+                                <View className="self-start px-2.5 py-0.5 rounded-full bg-pink/10">
+                                    <Text className="text-xs font-medium text-pink">Hàng mới</Text>
+                                </View>
+                            )}
+                        </View>
+                        <Text className="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                            {product.productId}
+                        </Text>
+                    </View>
+
+                    {/* Product Name */}
+                    <FormField label="Tên sản phẩm">
+                        <StyledTextInput
+                            value={form.productName}
+                            onChangeText={(text) => setField("productName", text)}
+                            placeholder="Nhập tên sản phẩm"
+                            editable={!isApproved}
+                        />
+                    </FormField>
+
+                    {/* Selects */}
+                    <StyledSelectInput
+                        label="Phân loại"
+                        value={form.categoryId}
+                        options={categoryOptions}
+                        onSelect={(v) => setField("categoryId", v)}
+                        editable={false}
+                    />
+
+                    <StyledSelectInput
+                        label="Màu sắc"
+                        value={form.colorId}
+                        options={colorOptions}
+                        onSelect={(v) => setField("colorId", v)}
+                        editable={!isApproved}
+                    />
+
+                    <StyledSelectInput
+                        label="Hoạ tiết"
+                        value={form.patternId}
+                        options={patternOptions}
+                        onSelect={(v) => setField("patternId", v)}
+                        editable={!isApproved}
+                    />
+
+                    <View className="flex-row gap-3">
+                        <View className="flex-1">
+                            <FormField label="Giá nhập">
+                                <StyledTextInput
+                                    value={formatThousands(form.importPrice)}
+                                    onChangeText={(v) => setField("importPrice", parseFormattedNumber(v))}
+                                    placeholder="0 ₫"
+                                    keyboardType="numeric"
+                                    editable={!isApproved}
+                                />
+                            </FormField>
+                        </View>
+                        <View className="flex-1">
+                            <FormField label="Giá bán">
+                                <StyledTextInput
+                                    value={formatThousands(form.salePrice)}
+                                    onChangeText={(v) => setField("salePrice", parseFormattedNumber(v))}
+                                    placeholder="0 ₫"
+                                    keyboardType="numeric"
+                                    editable={!isApproved}
+                                />
+                            </FormField>
+                        </View>
+                    </View>
+
+                    {/* Size type switch */}
+                    <View className="flex-row items-center justify-between py-1">
+                        <Text className={`text-sm ${isApproved ? "text-gray-400" : "text-gray-700"}`}>
+                            Kích cỡ - Số lượng
+                        </Text>
+                        <View className="flex-row items-center gap-2">
+                            <Text className={`text-sm ${isApproved ? "text-gray-400" : "text-gray-500"}`}>
+                                Size số
+                            </Text>
+                            <Switch
+                                value={form.isNumberSize}
+                                onValueChange={(v) => setField("isNumberSize", v)}
+                                trackColor={{ false: "#e5e7eb", true: "#f9a8d4" }}
+                                thumbColor={form.isNumberSize ? "#ec4899" : "#fff"}
+                                disabled={isApproved || isRestock}
+                            />
+                        </View>
+                    </View>
+
+                    {/* Size grid */}
+                    <FlatList
+                        data={sizes}
+                        keyExtractor={(item) => item}
+                        numColumns={2}
+                        scrollEnabled={false}
+                        columnWrapperClassName="gap-3"
+                        contentContainerClassName="gap-3"
+                        renderItem={({ item: size }) => (
+                            <View className="flex-1 flex-row items-center border border-gray-200 rounded-lg overflow-hidden">
+                                <View className="bg-gray-50 py-2.5 border-r border-gray-200">
+                                    <Text className="text-sm text-gray-600 w-20 text-center">{size}</Text>
+                                </View>
+                                <TextInput
+                                    className="flex-1 px-3 py-2.5 text-sm text-center"
+                                    value={quantities[size] === 0 ? "" : String(quantities[size])}
+                                    onChangeText={(v) => handleQuantityChange(size, parseFormattedNumber(v))}
+                                    keyboardType="number-pad"
+                                    placeholder="0"
+                                    placeholderTextColor="#9ca3af"
+                                    editable={!isApproved}
+                                />
+                            </View>
+                        )}
+                    />
+                </View>
             </KeyboardAwareScrollView>
 
             {/* ─── Sticky bottom bar ─────────────────────────────────── */}
