@@ -4,6 +4,7 @@ import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { sizesLetter, sizesNumber } from "@/constants/products";
 
 interface BarcodeScannerProps {
     onClose: () => void;
@@ -29,17 +30,15 @@ export function BarcodeScanner({ onClose, onScanned, hintText = "Đưa mã vào 
         onScanned(parsed);
     };
 
-    const SIZES = new Set(["FREESIZE", "S", "M", "L", "XL", "XXL", "2XL", "3XL", "4XL++"]);
+    const ALL_SIZES = new Set([...sizesLetter, ...sizesNumber].map(s => s.toUpperCase()));
 
     function parseProductIdFromBarcode(barcode: string) {
         const cleaned = barcode.trim();
         if (!cleaned) return "";
         const parts = cleaned.split("-");
         if (parts.length <= 1) return cleaned;
-        const lastPart = parts[parts.length - 1];
-        const lastUpper = lastPart.toUpperCase();
-
-        if (SIZES.has(lastUpper) || /^\d+$/.test(lastPart)) {
+        const lastPart = parts[parts.length - 1].toUpperCase();
+        if (ALL_SIZES.has(lastPart)) {
             return parts.slice(0, -1).join("-");
         }
         return cleaned;
