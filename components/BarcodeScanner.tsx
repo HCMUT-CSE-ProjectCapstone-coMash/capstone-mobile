@@ -25,7 +25,7 @@ export function BarcodeScanner({ onClose, onScanned, hintText = "Đưa mã vào 
     const handleBarCodeScanned = (result: { data: string }) => {
         if (scanned) return;
         setScanned(true);
-        const parsed = parseProductIdFromBarcode(result.data.trim().toUpperCase());
+        const parsed = parseProductIdFromBarcode(result.data.trim());
         onScanned(parsed);
     };
 
@@ -37,7 +37,9 @@ export function BarcodeScanner({ onClose, onScanned, hintText = "Đưa mã vào 
         const parts = cleaned.split("-");
         if (parts.length <= 1) return cleaned;
         const lastPart = parts[parts.length - 1];
-        if (SIZES.has(lastPart)) {
+        const lastUpper = lastPart.toUpperCase();
+
+        if (SIZES.has(lastUpper) || /^\d+$/.test(lastPart)) {
             return parts.slice(0, -1).join("-");
         }
         return cleaned;
