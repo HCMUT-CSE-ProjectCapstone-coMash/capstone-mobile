@@ -71,7 +71,7 @@ export default function ChangePasswordScreen() {
                     <View className="w-full bg-white gap-5 p-5">
                         <View className="items-center mb-8 py-5">
                             <Image
-                                source={require("@/public/assets/image/loginImg.png")}
+                                source={require("@/public/assets/images/loginImg.png")}
                                 className="w-1/2 h-[131px]"
                                 resizeMode="cover"
                             />

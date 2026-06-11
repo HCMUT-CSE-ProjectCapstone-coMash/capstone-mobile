@@ -81,7 +81,7 @@ export default function LoginScreen() {
 				<View className="flex-1 p-5 gap-5">
 					<View className="items-center py-5">
 						<Image
-							source={require("@/public/assets/image/loginImg.png")}
+							source={require("@/public/assets/images/loginImg.png")}
 							className="w-1/2 h-[131px]"
 							resizeMode="cover"
 						/>
