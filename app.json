@@ -10,7 +10,10 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.comash.capstonemobile"
+      "bundleIdentifier": "com.comash.capstonemobile",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.comash.capstonemobile",
@@ -45,6 +48,12 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "a8d098ee-0c7f-4213-a9b4-8159bdc8a76e"
+      }
     }
   }
 }
